@@ -115,6 +115,12 @@ extern "C" {
 ///Center of weightes
 	point center(polygon p);
 
+///Random point in square
+	point randomPointInSquare(polygon p);
+
+///Reflect point at center of polygon
+	point polarizePointInPolygon(polygon pl, point pnt);
+
 ///Random point in polygon
 	point randomPoint(polygon p);
 
@@ -139,9 +145,9 @@ extern "C" {
 ///
 enum {
 	POINTS_IN_QUADRANGLE=4,
-    MONTE_KARLO_ITERATIONS_COUNT=200,
-    SCREEN_WIDTH=1366,
-    SCREEN_HEIGHT=768,
+    MONTE_KARLO_ITERATIONS_COUNT=1000,
+    SCREEN_WIDTH=800,
+    SCREEN_HEIGHT=600,
     SCALE_CONST=300
 };
 

@@ -29,11 +29,12 @@
 			</Target>
 		</Build>
 		<Compiler>
+			<Add option="-O3" />
 			<Add option="-Wall" />
-			<Add option="-lglew32 -lglfw3 -lopengl32 -lglu32 -lgdi32 -O2" />
 			<Add directory="D:/Dropbox/Radiosity/Radiosity/" />
 		</Compiler>
 		<Linker>
+			<Add option="-lopengl32 -lglu32 -lgdi32" />
 			<Add library="gdi32" />
 			<Add library="user32" />
 			<Add library="kernel32" />

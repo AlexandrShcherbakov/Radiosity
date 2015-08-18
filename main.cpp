@@ -87,22 +87,6 @@ int WINAPI WinMain (HINSTANCE hThisInstance,
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glLoadIdentity();//load identity matrix
 
-    glTranslatef(0.0f,0.0f,0.0f);//move forward 4 units
-
-    glColor3f(1.0f,1.0f,1.0f); //blue color
-
-    glPointSize(1000.0f);//set point size to 10 pixels
-
-    glBegin(GL_POLYGON);//begin drawing of polygon
-      glVertex3f(-0.5f,0.5f,0.0f);//first vertex
-      glVertex3f(0.5f,0.5f,0.0f);//second vertex
-      glVertex3f(1.0f,0.0f,0.0f);//third vertex
-      glVertex3f(0.5f,-0.5f,0.0f);//fourth vertex
-      glVertex3f(-0.5f,-0.5f,0.0f);//fifth vertex
-      glVertex3f(-1.0f,0.0f,0.0f);//sixth vertex
-    glEnd();//end drawing of polygon
-    SwapBuffers(hdc);
-
     radiosityMain(hdc);
 
     /* Run the message loop. It will run until GetMessage() returns 0 */

@@ -21,12 +21,11 @@ int radiosityMain(HDC hdc) {
 	#ifdef OPTIMIZE_OUTPUT
 	clock_t tm = clock();
 	#endif // OPTIMIZE_OUTPUT
-
-	int PLG = 12;
-
+	int PLG = 6;
+	//srand(1488);
     polygon * hard = hardcodedPolygons();
     patched_polygon plgs[PLG];
-    int k = 5;
+    int k = 11;
     #ifdef OPTIMIZE_OUTPUT
     printf("Time for prepare scene: %d\n", clock() - tm);
 	tm = clock();
@@ -63,21 +62,38 @@ int radiosityMain(HDC hdc) {
         sideSize += plgs[i].axis1 * plgs[i].axis2;
     }
 
+	double mx = 0, mn = 2, dif = 0;
+	for (int i = 0; i < sideSize; ++i) {
+		double res = 0;
+        for (int j = 0; j < sideSize; ++j) {
+            res += ff[i][j];
+            if (i == 130) {
+                printf("%lf ", ff[i][j]);
+            }
+        }
+		printf("FF str %d: %lf\n", i, res);
+		mx = max(mx, res);
+		mn = min(mn, res);
+		dif += res;
+	}
+	printf("OK %lf %lf %lf\n", mn, dif / sideSize, mx);
+	//printf("%lf %lf\n", ff[130][30], ff[30][130]);
+
     patch_radiosity * rad = calloc(sideSize, sizeof(*rad));
-    rad[33 * 33 + k * k * 3 + k * k / 2].emmision.x = k * k;
-    rad[33 * 33 + k * k * 3 + k * k / 2].emmision.y = k * k;
-    rad[33 * 33 + k * k * 3 + k * k / 2].emmision.z = k * k;
+    rad[k * k * 4 + k * k / 2].emmision.x = k * k;
+    rad[k * k * 4 + k * k / 2].emmision.y = k * k;
+    rad[k * k * 4 + k * k / 2].emmision.z = k * k;
     for (int i = 0; i < sideSize; ++i) {
         rad[i].reflectance.x = 0.75;
         rad[i].reflectance.y = 0.75;
         rad[i].reflectance.z = 0.75;
     }
-    for (int i = 33 * 33; i < 33 * 33 + k * k; ++i) {
+    for (int i = k * k; i < 2 * k * k; ++i) {
         rad[i].reflectance.x = 1;
         rad[i].reflectance.y = 0;
         rad[i].reflectance.z = 0;
     }
-    for (int i = 33 * 33 + k * k; i < 33 * 33 + 2 * k * k; ++i) {
+    for (int i = 2 * k * k; i < 3 * k * k; ++i) {
         rad[i].reflectance.x = 0;
         rad[i].reflectance.y = 1;
         rad[i].reflectance.z = 0;
@@ -229,7 +245,9 @@ int radiosityMain(HDC hdc) {
 	#ifdef OPTIMIZE_OUTPUT
 	tm = clock();
 	#endif // OPTIMIZE_OUTPUT
+
     drawScene(hard, plgs, PLG, rad, sideSize, hdc);
+
     #ifdef OPTIMIZE_OUTPUT
     printf("Time for draw scene: %d\n", clock() - tm);
 	tm = clock();
@@ -591,17 +609,27 @@ double computeFormFactorForPatches(patch p1, patch p2) {
 		//TODO: add visibility function
 		//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 		double iter_res = 0;
-        point on_p1 = randomPoint(p1);
-        point on_p2 = randomPoint(p2);
+        //point on_p1 = randomPoint(p1);
+        //point on_p2 = randomPoint(p2);
+        point on_p1 = randomPointInSquare(p1);
+        point on_p2 = randomPointInSquare(p2);
         point r = sub(on_p1, on_p2);
         iter_res = cosV(r, p2.normal);
-        double tmp = cosV(mult(r, -1), p1.normal);
         iter_res *= cosV(mult(r, -1), p1.normal);
-        iter_res /= M_PI;
 		iter_res /= length(r) * length(r);
 		result += iter_res;
     }
     result /= MONTE_KARLO_ITERATIONS_COUNT;
+    result /= M_PI;
+	/*double iter_res = 0;
+	point on_p1 = sum(p1.vertex[0], mult(sub(p1.vertex[2], p1.vertex[0]), 0.5));
+	point on_p2 = sum(p2.vertex[0], mult(sub(p2.vertex[2], p2.vertex[0]), 0.5));
+	point r = sub(on_p1, on_p2);
+	iter_res = cosV(r, p2.normal);
+	iter_res *= cosV(mult(r, -1), p1.normal);
+	iter_res /= M_PI;
+	iter_res /= length(r) * length(r);
+	printf("dif: %lf\n", result - iter_res);*/
     return result * square(p1) * square(p2);
 }
 
@@ -672,11 +700,14 @@ int drawScene(polygon * pls, patched_polygon * plgs, int polygonCount,
 		for (int i1 = 0; i1 < loc_pol.axis1; ++i1) {
 			for (int j1 = 0; j1 < loc_pol.axis2; ++j1) {
 				int pt_ind = offsets[pares[i].num] + i1 * loc_pol.axis2 + j1;
-				//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-				//glLoadIdentity();
-				glColor3f(radio[pt_ind].deposit.x,
+
+				/*glColor3f(radio[pt_ind].deposit.x,
 						  radio[pt_ind].deposit.y,
-						  radio[pt_ind].deposit.z);
+						  radio[pt_ind].deposit.z);*/
+				//Add gamma-correction
+				glColor3f(pow(radio[pt_ind].deposit.x, 1.0 / 2),
+						  pow(radio[pt_ind].deposit.y, 1.0 / 2),
+						  pow(radio[pt_ind].deposit.z, 1.0 / 2));
 				glBegin(GL_POLYGON);
 				patch loc_pt = plgs[pares[i].num].patches[i1][j1];
 				for (int i2 = 0; i2 < loc_pt.length; ++i2) {
@@ -790,6 +821,20 @@ point center(polygon p) {
     return mult(c, 1.0 / p.length);
 }
 
+
+point randomPointInSquare(polygon p) {
+    point p1 = sub(p.vertex[1], p.vertex[0]);
+    point p2 = sub(p.vertex[3], p.vertex[0]);
+    double l1 = (double)rand() / RAND_MAX;
+    double l2 = (double)rand() / RAND_MAX;
+    //return sum(p.vertex[0], mult(sub(p.vertex[2], p.vertex[0]), 0.5));
+    return sum(p.vertex[0], sum(mult(p1, l1), mult(p2, l2)));
+}
+
+point polarizePointInPolygon(polygon pl, point pnt) {
+    point c = center(pl);
+    return sum(c, sub(c, pnt));
+}
 
 point randomPoint(polygon p) {
 	#ifdef OPTIMIZE_OUTPUT1
