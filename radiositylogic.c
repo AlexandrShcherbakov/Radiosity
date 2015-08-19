@@ -6,6 +6,7 @@
 #include <windows.h>
 #include <float.h>
 #include <gl/gl.h>
+#include <gl/glu.h>
 
 #define OPTIMIZE_OUTPUT
 
@@ -18,14 +19,16 @@ long long count[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 #endif // OPTIMIZE_OUTPUT
 
 int radiosityMain(HDC hdc) {
+
 	#ifdef OPTIMIZE_OUTPUT
 	clock_t tm = clock();
 	#endif // OPTIMIZE_OUTPUT
+
 	int PLG = 12;
-	srand(1488);
     polygon * hard = hardcodedPolygons();
     patched_polygon plgs[PLG];
-    int k = 1;
+    int k = 3;
+
     #ifdef OPTIMIZE_OUTPUT
     printf("Time for prepare scene: %d\n", clock() - tm);
 	tm = clock();
@@ -39,6 +42,7 @@ int radiosityMain(HDC hdc) {
 	#ifdef NYAN_CAT
 	plgs[0] = getPatchesFromQuadrangle(hard[0], 33);
 	#endif
+
 	#ifdef OPTIMIZE_OUTPUT
     printf("Time for create patches: %d\n", clock() - tm);
 	tm = clock();
@@ -61,23 +65,6 @@ int radiosityMain(HDC hdc) {
     for (int i = 0; i < PLG; ++i) {
         sideSize += plgs[i].axis1 * plgs[i].axis2;
     }
-
-	/*double mx = 0, mn = 2, dif = 0;
-	for (int i = 0; i < sideSize; ++i) {
-		double res = 0;
-        for (int j = 0; j < sideSize; ++j) {
-            res += ff[i][j];
-            if (i == 130) {
-                printf("%lf ", ff[i][j]);
-            }
-        }
-		printf("FF str %d: %lf\n", i, res);
-		mx = max(mx, res);
-		mn = min(mn, res);
-		dif += res;
-	}
-	printf("OK %lf %lf %lf\n", mn, dif / sideSize, mx);*/
-	//printf("%lf %lf\n", ff[130][30], ff[30][130]);
 
     patch_radiosity * rad = calloc(sideSize, sizeof(*rad));
     rad[k * k * 4 + k * k / 2].emmision.x = k * k;
@@ -386,119 +373,120 @@ polygon * hardcodedPolygons() {
     plgs[5].vertex[3].y = 1;
     plgs[5].vertex[3].z = -1;
 
-	//Front wall
-	plgs[6].vertex = calloc(POINTS_IN_QUADRANGLE, sizeof(point));
-    plgs[6].normal.x = -1;
+
+	//Back wall
+    plgs[6].vertex = calloc(POINTS_IN_QUADRANGLE, sizeof(point));
+    plgs[6].normal.x = 1;
     plgs[6].normal.y = 0;
     plgs[6].normal.z = 0;
     plgs[6].length = POINTS_IN_QUADRANGLE;
-	plgs[6].vertex[0].x = 0.25;
+	plgs[6].vertex[0].x = -0.25;
     plgs[6].vertex[0].y = -0.25;
     plgs[6].vertex[0].z = -0.75;
-    plgs[6].vertex[1].x = 0.25;
+    plgs[6].vertex[1].x = -0.25;
     plgs[6].vertex[1].y = -0.25;
     plgs[6].vertex[1].z = -0.25;
-    plgs[6].vertex[2].x = 0.25;
+    plgs[6].vertex[2].x = -0.25;
     plgs[6].vertex[2].y = 0.25;
     plgs[6].vertex[2].z = -0.25;
-    plgs[6].vertex[3].x = 0.25;
+    plgs[6].vertex[3].x = -0.25;
     plgs[6].vertex[3].y = 0.25;
     plgs[6].vertex[3].z = -0.75;
 
-	//Back wall
-    plgs[7].vertex = calloc(POINTS_IN_QUADRANGLE, sizeof(point));
-    plgs[7].normal.x = 1;
-    plgs[7].normal.y = 0;
+    //Left wall
+	plgs[7].vertex = calloc(POINTS_IN_QUADRANGLE, sizeof(point));
+    plgs[7].normal.x = 0;
+    plgs[7].normal.y = 1;
     plgs[7].normal.z = 0;
     plgs[7].length = POINTS_IN_QUADRANGLE;
-	plgs[7].vertex[0].x = -0.25;
+	plgs[7].vertex[0].x = 0.25;
     plgs[7].vertex[0].y = -0.25;
     plgs[7].vertex[0].z = -0.75;
-    plgs[7].vertex[1].x = -0.25;
+    plgs[7].vertex[1].x = 0.25;
     plgs[7].vertex[1].y = -0.25;
     plgs[7].vertex[1].z = -0.25;
     plgs[7].vertex[2].x = -0.25;
-    plgs[7].vertex[2].y = 0.25;
+    plgs[7].vertex[2].y = -0.25;
     plgs[7].vertex[2].z = -0.25;
-    plgs[7].vertex[3].x = -0.25;
-    plgs[7].vertex[3].y = 0.25;
+    plgs[7].vertex[3].x = -0.5;
+    plgs[7].vertex[3].y = -0.25;
     plgs[7].vertex[3].z = -0.75;
 
-    //Left wall
+    //Right wall
 	plgs[8].vertex = calloc(POINTS_IN_QUADRANGLE, sizeof(point));
     plgs[8].normal.x = 0;
-    plgs[8].normal.y = 1;
+    plgs[8].normal.y = -1;
     plgs[8].normal.z = 0;
     plgs[8].length = POINTS_IN_QUADRANGLE;
-	plgs[8].vertex[0].x = 0.25;
-    plgs[8].vertex[0].y = -0.25;
+	plgs[8].vertex[0].x = -0.25;
+    plgs[8].vertex[0].y = 0.25;
     plgs[8].vertex[0].z = -0.75;
-    plgs[8].vertex[1].x = 0.25;
-    plgs[8].vertex[1].y = -0.25;
+    plgs[8].vertex[1].x = -0.25;
+    plgs[8].vertex[1].y = 0.25;
     plgs[8].vertex[1].z = -0.25;
-    plgs[8].vertex[2].x = -0.25;
-    plgs[8].vertex[2].y = -0.25;
+    plgs[8].vertex[2].x = 0.25;
+    plgs[8].vertex[2].y = 0.25;
     plgs[8].vertex[2].z = -0.25;
-    plgs[8].vertex[3].x = -0.5;
-    plgs[8].vertex[3].y = -0.25;
+    plgs[8].vertex[3].x = 0.25;
+    plgs[8].vertex[3].y = 0.25;
     plgs[8].vertex[3].z = -0.75;
 
-    //Right wall
+    //Bottom wall
 	plgs[9].vertex = calloc(POINTS_IN_QUADRANGLE, sizeof(point));
     plgs[9].normal.x = 0;
-    plgs[9].normal.y = -1;
-    plgs[9].normal.z = 0;
+    plgs[9].normal.y = 0;
+    plgs[9].normal.z = 1;
     plgs[9].length = POINTS_IN_QUADRANGLE;
-	plgs[9].vertex[0].x = -0.25;
-    plgs[9].vertex[0].y = 0.25;
+	plgs[9].vertex[0].x = 0.25;
+    plgs[9].vertex[0].y = -0.25;
     plgs[9].vertex[0].z = -0.75;
     plgs[9].vertex[1].x = -0.25;
-    plgs[9].vertex[1].y = 0.25;
-    plgs[9].vertex[1].z = -0.25;
-    plgs[9].vertex[2].x = 0.25;
+    plgs[9].vertex[1].y = -0.25;
+    plgs[9].vertex[1].z = -0.75;
+    plgs[9].vertex[2].x = -0.25;
     plgs[9].vertex[2].y = 0.25;
-    plgs[9].vertex[2].z = -0.25;
+    plgs[9].vertex[2].z = -0.75;
     plgs[9].vertex[3].x = 0.25;
     plgs[9].vertex[3].y = 0.25;
     plgs[9].vertex[3].z = -0.75;
 
-    //Bottom wall
+	//Top wall
 	plgs[10].vertex = calloc(POINTS_IN_QUADRANGLE, sizeof(point));
     plgs[10].normal.x = 0;
     plgs[10].normal.y = 0;
-    plgs[10].normal.z = 1;
+    plgs[10].normal.z = -1;
     plgs[10].length = POINTS_IN_QUADRANGLE;
 	plgs[10].vertex[0].x = 0.25;
     plgs[10].vertex[0].y = -0.25;
-    plgs[10].vertex[0].z = -0.75;
+    plgs[10].vertex[0].z = -0.25;
     plgs[10].vertex[1].x = -0.25;
     plgs[10].vertex[1].y = -0.25;
-    plgs[10].vertex[1].z = -0.75;
+    plgs[10].vertex[1].z = -0.25;
     plgs[10].vertex[2].x = -0.25;
     plgs[10].vertex[2].y = 0.25;
-    plgs[10].vertex[2].z = -0.75;
+    plgs[10].vertex[2].z = -0.25;
     plgs[10].vertex[3].x = 0.25;
     plgs[10].vertex[3].y = 0.25;
-    plgs[10].vertex[3].z = -0.75;
+    plgs[10].vertex[3].z = -0.25;
 
-	//Top wall
+	//Front wall
 	plgs[11].vertex = calloc(POINTS_IN_QUADRANGLE, sizeof(point));
-    plgs[11].normal.x = 0;
+    plgs[11].normal.x = -1;
     plgs[11].normal.y = 0;
-    plgs[11].normal.z = -1;
+    plgs[11].normal.z = 0;
     plgs[11].length = POINTS_IN_QUADRANGLE;
 	plgs[11].vertex[0].x = 0.25;
     plgs[11].vertex[0].y = -0.25;
-    plgs[11].vertex[0].z = -0.25;
-    plgs[11].vertex[1].x = -0.25;
+    plgs[11].vertex[0].z = -0.75;
+    plgs[11].vertex[1].x = 0.25;
     plgs[11].vertex[1].y = -0.25;
     plgs[11].vertex[1].z = -0.25;
-    plgs[11].vertex[2].x = -0.25;
+    plgs[11].vertex[2].x = 0.25;
     plgs[11].vertex[2].y = 0.25;
     plgs[11].vertex[2].z = -0.25;
     plgs[11].vertex[3].x = 0.25;
     plgs[11].vertex[3].y = 0.25;
-    plgs[11].vertex[3].z = -0.25;
+    plgs[11].vertex[3].z = -0.75;
 
 	return plgs;
 }
@@ -563,8 +551,6 @@ double ** computeFormFactorForScene(patched_polygon * plgs, int polygonCount) {
     for (int i = 0; i < sideSize; ++i) {
         FF[i] = calloc(sideSize, sizeof(*FF[i]));
     }
-
-
     int offset1 = 0;
     for (int i = 0; i < polygonCount; ++i) {
         int offset2 = offset1 + plgs[i].axis1 * plgs[i].axis2;
@@ -600,7 +586,7 @@ int computeFormFactorForPolygons(patched_polygon p1, patched_polygon p2,
 }
 
 
-double computeFormFactorForPatches(patch p1, patch p2) {
+double computeFormFactorForPatches(patch p1, patch p2, polygon *pl, int polygonCount) {
 	double result = 0;
     for (int i = 0; i < MONTE_KARLO_ITERATIONS_COUNT; ++i) {
 		//TODO: add visibility function
@@ -624,7 +610,6 @@ double computeFormFactorForPatches(patch p1, patch p2) {
 
 int computeRadiosity(patch_radiosity *result, double ** ff,
 					int patchesCount, int iterCount) {
-	//patch_radiosity *result = calloc(patchesCount, sizeof(*result));
 	for (int i = 0; i < patchesCount; ++i)
 	{
 		result[i].excident = result[i].emmision;
@@ -656,7 +641,36 @@ int computeRadiosity(patch_radiosity *result, double ** ff,
 
 int drawScene(polygon * pls, patched_polygon * plgs, int polygonCount,
 				patch_radiosity *radio, int patchCount, HDC hdc) {
-	point cam_center = {1.7, 0, 0};
+
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glLoadIdentity();//load identity matrix
+
+    glTranslatef(0.0f,-0.5f,-3.8f);//move forward 4 units
+
+    int offset = 0;
+    for (int i = 0; i < polygonCount; ++i) {
+		if (i == 5) continue;
+		for (int i1 = 0; i1 < plgs[i].axis1; ++i1) {
+			for (int j1 = 0; j1 < plgs[i].axis2; ++j1) {
+				int pt_ind = offset;// + i1 * plgs[i].axis2 + j1;
+
+				//Add gamma-correction
+				glColor3f(pow(radio[pt_ind].deposit.x, 1.0 / 2),
+						  pow(radio[pt_ind].deposit.y, 1.0 / 2),
+						  pow(radio[pt_ind].deposit.z, 1.0 / 2));
+				glBegin(GL_POLYGON);
+				patch loc_pt = plgs[i].patches[i1][j1];
+				for (int i2 = 0; i2 < loc_pt.length; ++i2) {
+                    glVertex3d(loc_pt.vertex[i2].y, loc_pt.vertex[i2].z + 0.2, loc_pt.vertex[i2].x);
+				}
+				glEnd();
+				offset++;
+			}
+        }
+    }
+
+    SwapBuffers(hdc);
+	/*point cam_center = {1.7, 0, 0};
     point cam_top = {0.7, 0, 1};
     point cam_front = {0.7, 0, 0};
     point cam_right = {0.7, 1, 0};
@@ -689,9 +703,6 @@ int drawScene(polygon * pls, patched_polygon * plgs, int polygonCount,
 			for (int j1 = 0; j1 < loc_pol.axis2; ++j1) {
 				int pt_ind = offsets[pares[i].num] + i1 * loc_pol.axis2 + j1;
 
-				/*glColor3f(radio[pt_ind].deposit.x,
-						  radio[pt_ind].deposit.y,
-						  radio[pt_ind].deposit.z);*/
 				//Add gamma-correction
 				glColor3f(pow(radio[pt_ind].deposit.x, 1.0 / 2),
 						  pow(radio[pt_ind].deposit.y, 1.0 / 2),
@@ -711,7 +722,7 @@ int drawScene(polygon * pls, patched_polygon * plgs, int polygonCount,
 			}
         }
     }
-    SwapBuffers(hdc);
+    SwapBuffers(hdc);*/
 }
 
 
@@ -878,4 +889,18 @@ int inPolygon(polygon pl, point p) {
 double distance(polygon pl, point p) {
     double d = -multS(pl.normal, pl.vertex[0]);
     return multS(pl.normal, p) + d;
+}
+
+
+int checkIntersection(polygon pl, point p1, point p2) {
+    point aug = sub(p2, p1);
+    double d = -multS(pl.normal, pl.vertex[0]);
+    if (d < DBL_EPSILON) {
+        return inPolygon(pl, p1);
+    }
+    double t = multS(pl.normal, aug) / -(multS(pl.normal, p1) + d);
+    if (t <= 0 || t > 1) {
+        return 0;
+    }
+    return inPolygon(pl, sum(p1, mult(aug, t)));
 }

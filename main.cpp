@@ -84,6 +84,13 @@ int WINAPI WinMain (HINSTANCE hThisInstance,
     wglMakeCurrent(hdc, hglrc);
 
 
+	glViewport(0,0,(GLsizei)SCREEN_WIDTH,(GLsizei)SCREEN_HEIGHT);
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();//load identity matrix
+	gluPerspective(45.0f,(GLfloat)SCREEN_WIDTH/(GLfloat)SCREEN_HEIGHT,1.0f,1000.0f);
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();//load identity matrix
+
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glLoadIdentity();//load identity matrix
 

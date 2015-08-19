@@ -139,6 +139,9 @@ extern "C" {
 ///Distance between point and area
 	double distance(polygon pl, point p);
 
+///Check if ray has mutual point with polygon
+    int checkIntersection(polygon pl, point p1, point p2);
+
 ///********************************************
 ///
 ///CONSTANTS
@@ -146,10 +149,37 @@ extern "C" {
 enum {
 	POINTS_IN_QUADRANGLE=4,
     MONTE_KARLO_ITERATIONS_COUNT=1000,
-    SCREEN_WIDTH=800,
+    SCREEN_WIDTH=600,
     SCREEN_HEIGHT=600,
     SCALE_CONST=300
 };
+
+
+///********************************************
+///
+///GLOBAL VARIABLES
+///
+
+///Form factor for scene
+static double **ff;
+
+///Polygons
+static polygon *poly;
+
+///Patched polygons
+static patched_polygon *pt_poly;
+
+///Radiosity
+static patch_radiosity *radio;
+
+///Number of polygons
+static int polygonCount;
+
+///Number of patches
+static int patchCount;
+
+///Array of offsets for index of patch
+static int *pt_ind_offsets;
 
 #ifdef __cplusplus
 }
