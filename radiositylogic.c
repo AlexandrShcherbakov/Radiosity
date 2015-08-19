@@ -21,11 +21,11 @@ int radiosityMain(HDC hdc) {
 	#ifdef OPTIMIZE_OUTPUT
 	clock_t tm = clock();
 	#endif // OPTIMIZE_OUTPUT
-	int PLG = 6;
-	//srand(1488);
+	int PLG = 12;
+	srand(1488);
     polygon * hard = hardcodedPolygons();
     patched_polygon plgs[PLG];
-    int k = 11;
+    int k = 1;
     #ifdef OPTIMIZE_OUTPUT
     printf("Time for prepare scene: %d\n", clock() - tm);
 	tm = clock();
@@ -62,7 +62,7 @@ int radiosityMain(HDC hdc) {
         sideSize += plgs[i].axis1 * plgs[i].axis2;
     }
 
-	double mx = 0, mn = 2, dif = 0;
+	/*double mx = 0, mn = 2, dif = 0;
 	for (int i = 0; i < sideSize; ++i) {
 		double res = 0;
         for (int j = 0; j < sideSize; ++j) {
@@ -76,7 +76,7 @@ int radiosityMain(HDC hdc) {
 		mn = min(mn, res);
 		dif += res;
 	}
-	printf("OK %lf %lf %lf\n", mn, dif / sideSize, mx);
+	printf("OK %lf %lf %lf\n", mn, dif / sideSize, mx);*/
 	//printf("%lf %lf\n", ff[130][30], ff[30][130]);
 
     patch_radiosity * rad = calloc(sideSize, sizeof(*rad));
@@ -96,6 +96,11 @@ int radiosityMain(HDC hdc) {
     for (int i = 2 * k * k; i < 3 * k * k; ++i) {
         rad[i].reflectance.x = 0;
         rad[i].reflectance.y = 1;
+        rad[i].reflectance.z = 0;
+    }
+    for (int i = 6 * k * k; i < sideSize; ++i) {
+        rad[i].reflectance.x = 0.75;
+        rad[i].reflectance.y = 0.75;
         rad[i].reflectance.z = 0;
     }
     //NYAN CAT!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -223,11 +228,6 @@ int radiosityMain(HDC hdc) {
 	setColor(rad, whiteX, whiteY, 2, 1.0, 1.0, 1.0);
 	#endif
     //END NYAN CAT
-    /*for (int i = 4 * k * k + 12; i < 5 * k * k; i += k * k) {
-        rad[i].emmision.x = k * k / 10.0;
-        rad[i].emmision.y = k * k / 10.0;
-        rad[i].emmision.z = k * k / 10.0;
-    }*/
     #ifdef OPTIMIZE_OUTPUT
 	tm = clock();
 	#endif // OPTIMIZE_OUTPUT
@@ -238,9 +238,6 @@ int radiosityMain(HDC hdc) {
     printf("Time for compute radiosity: %d\n", clock() - tm);
 	tm = clock();
 	#endif // OPTIMIZE_OUTPUT
-	/*for (int i = 0; i < k *k * 6; ++i) {
-        printf("Explicit: %lf %lf %lf\n", rad[i].excident.x, rad[i].excident.y, rad[i].excident.z);
-	}*/
 
 	#ifdef OPTIMIZE_OUTPUT
 	tm = clock();
@@ -273,7 +270,7 @@ void setLine(patch_radiosity * rad, int X1, int X2, int Y, double R, double G, d
 
 
 polygon * hardcodedPolygons() {
-	polygon * plgs = calloc(6, sizeof(*plgs));
+	polygon * plgs = calloc(12, sizeof(*plgs));
 
 	//Back wall
     plgs[0].vertex = calloc(POINTS_IN_QUADRANGLE, sizeof(point));
@@ -389,42 +386,42 @@ polygon * hardcodedPolygons() {
     plgs[5].vertex[3].y = 1;
     plgs[5].vertex[3].z = -1;
 
-	return plgs;
-
+	//Front wall
 	plgs[6].vertex = calloc(POINTS_IN_QUADRANGLE, sizeof(point));
     plgs[6].normal.x = -1;
     plgs[6].normal.y = 0;
     plgs[6].normal.z = 0;
     plgs[6].length = POINTS_IN_QUADRANGLE;
-	plgs[6].vertex[0].x = 0.5;
-    plgs[6].vertex[0].y = -0.5;
+	plgs[6].vertex[0].x = 0.25;
+    plgs[6].vertex[0].y = -0.25;
     plgs[6].vertex[0].z = -0.75;
-    plgs[6].vertex[1].x = 0.5;
-    plgs[6].vertex[1].y = -0.5;
-    plgs[6].vertex[1].z = 0.25;
-    plgs[6].vertex[2].x = 0.5;
-    plgs[6].vertex[2].y = 0.5;
-    plgs[6].vertex[2].z = 0.25;
-    plgs[6].vertex[3].x = 0.5;
-    plgs[6].vertex[3].y = 0.5;
+    plgs[6].vertex[1].x = 0.25;
+    plgs[6].vertex[1].y = -0.25;
+    plgs[6].vertex[1].z = -0.25;
+    plgs[6].vertex[2].x = 0.25;
+    plgs[6].vertex[2].y = 0.25;
+    plgs[6].vertex[2].z = -0.25;
+    plgs[6].vertex[3].x = 0.25;
+    plgs[6].vertex[3].y = 0.25;
     plgs[6].vertex[3].z = -0.75;
 
+	//Back wall
     plgs[7].vertex = calloc(POINTS_IN_QUADRANGLE, sizeof(point));
     plgs[7].normal.x = 1;
     plgs[7].normal.y = 0;
     plgs[7].normal.z = 0;
     plgs[7].length = POINTS_IN_QUADRANGLE;
-	plgs[7].vertex[0].x = -0.5;
-    plgs[7].vertex[0].y = -0.5;
+	plgs[7].vertex[0].x = -0.25;
+    plgs[7].vertex[0].y = -0.25;
     plgs[7].vertex[0].z = -0.75;
-    plgs[7].vertex[1].x = -0.5;
-    plgs[7].vertex[1].y = -0.5;
-    plgs[7].vertex[1].z = 0.25;
-    plgs[7].vertex[2].x = -0.5;
-    plgs[7].vertex[2].y = 0.5;
-    plgs[7].vertex[2].z = 0.25;
-    plgs[7].vertex[3].x = -0.5;
-    plgs[7].vertex[3].y = 0.5;
+    plgs[7].vertex[1].x = -0.25;
+    plgs[7].vertex[1].y = -0.25;
+    plgs[7].vertex[1].z = -0.25;
+    plgs[7].vertex[2].x = -0.25;
+    plgs[7].vertex[2].y = 0.25;
+    plgs[7].vertex[2].z = -0.25;
+    plgs[7].vertex[3].x = -0.25;
+    plgs[7].vertex[3].y = 0.25;
     plgs[7].vertex[3].z = -0.75;
 
     //Left wall
@@ -433,17 +430,17 @@ polygon * hardcodedPolygons() {
     plgs[8].normal.y = 1;
     plgs[8].normal.z = 0;
     plgs[8].length = POINTS_IN_QUADRANGLE;
-	plgs[8].vertex[0].x = 0.5;
-    plgs[8].vertex[0].y = -0.5;
+	plgs[8].vertex[0].x = 0.25;
+    plgs[8].vertex[0].y = -0.25;
     plgs[8].vertex[0].z = -0.75;
-    plgs[8].vertex[1].x = 0.5;
-    plgs[8].vertex[1].y = -0.5;
-    plgs[8].vertex[1].z = 0.25;
-    plgs[8].vertex[2].x = -0.5;
-    plgs[8].vertex[2].y = -0.5;
-    plgs[8].vertex[2].z = 0.25;
+    plgs[8].vertex[1].x = 0.25;
+    plgs[8].vertex[1].y = -0.25;
+    plgs[8].vertex[1].z = -0.25;
+    plgs[8].vertex[2].x = -0.25;
+    plgs[8].vertex[2].y = -0.25;
+    plgs[8].vertex[2].z = -0.25;
     plgs[8].vertex[3].x = -0.5;
-    plgs[8].vertex[3].y = -0.5;
+    plgs[8].vertex[3].y = -0.25;
     plgs[8].vertex[3].z = -0.75;
 
     //Right wall
@@ -452,18 +449,18 @@ polygon * hardcodedPolygons() {
     plgs[9].normal.y = -1;
     plgs[9].normal.z = 0;
     plgs[9].length = POINTS_IN_QUADRANGLE;
-	plgs[9].vertex[0].x = 0.5;
-    plgs[9].vertex[0].y = 0.5;
+	plgs[9].vertex[0].x = -0.25;
+    plgs[9].vertex[0].y = 0.25;
     plgs[9].vertex[0].z = -0.75;
-    plgs[9].vertex[1].x = -0.5;
-    plgs[9].vertex[1].y = 0.5;
-    plgs[9].vertex[1].z = -0.75;
-    plgs[9].vertex[2].x = -0.5;
-    plgs[9].vertex[2].y = 0.5;
-    plgs[9].vertex[2].z = 0.25;
-    plgs[9].vertex[3].x = 0.5;
-    plgs[9].vertex[3].y = 0.5;
-    plgs[9].vertex[3].z = 0.25;
+    plgs[9].vertex[1].x = -0.25;
+    plgs[9].vertex[1].y = 0.25;
+    plgs[9].vertex[1].z = -0.25;
+    plgs[9].vertex[2].x = 0.25;
+    plgs[9].vertex[2].y = 0.25;
+    plgs[9].vertex[2].z = -0.25;
+    plgs[9].vertex[3].x = 0.25;
+    plgs[9].vertex[3].y = 0.25;
+    plgs[9].vertex[3].z = -0.75;
 
     //Bottom wall
 	plgs[10].vertex = calloc(POINTS_IN_QUADRANGLE, sizeof(point));
@@ -471,17 +468,17 @@ polygon * hardcodedPolygons() {
     plgs[10].normal.y = 0;
     plgs[10].normal.z = 1;
     plgs[10].length = POINTS_IN_QUADRANGLE;
-	plgs[10].vertex[0].x = 0.5;
-    plgs[10].vertex[0].y = -0.5;
+	plgs[10].vertex[0].x = 0.25;
+    plgs[10].vertex[0].y = -0.25;
     plgs[10].vertex[0].z = -0.75;
-    plgs[10].vertex[1].x = -0.5;
-    plgs[10].vertex[1].y = -0.5;
+    plgs[10].vertex[1].x = -0.25;
+    plgs[10].vertex[1].y = -0.25;
     plgs[10].vertex[1].z = -0.75;
-    plgs[10].vertex[2].x = -0.5;
-    plgs[10].vertex[2].y = 0.5;
+    plgs[10].vertex[2].x = -0.25;
+    plgs[10].vertex[2].y = 0.25;
     plgs[10].vertex[2].z = -0.75;
-    plgs[10].vertex[3].x = 0.5;
-    plgs[10].vertex[3].y = 0.5;
+    plgs[10].vertex[3].x = 0.25;
+    plgs[10].vertex[3].y = 0.25;
     plgs[10].vertex[3].z = -0.75;
 
 	//Top wall
@@ -490,18 +487,18 @@ polygon * hardcodedPolygons() {
     plgs[11].normal.y = 0;
     plgs[11].normal.z = -1;
     plgs[11].length = POINTS_IN_QUADRANGLE;
-	plgs[11].vertex[0].x = 0.5;
-    plgs[11].vertex[0].y = -0.5;
-    plgs[11].vertex[0].z = 0.25;
-    plgs[11].vertex[1].x = -0.5;
-    plgs[11].vertex[1].y = -0.5;
-    plgs[11].vertex[1].z = 0.25;
-    plgs[11].vertex[2].x = -0.5;
-    plgs[11].vertex[2].y = 0.5;
-    plgs[11].vertex[2].z = 0.25;
-    plgs[11].vertex[3].x = 0.5;
-    plgs[11].vertex[3].y = 0.5;
-    plgs[11].vertex[3].z = 0.25;
+	plgs[11].vertex[0].x = 0.25;
+    plgs[11].vertex[0].y = -0.25;
+    plgs[11].vertex[0].z = -0.25;
+    plgs[11].vertex[1].x = -0.25;
+    plgs[11].vertex[1].y = -0.25;
+    plgs[11].vertex[1].z = -0.25;
+    plgs[11].vertex[2].x = -0.25;
+    plgs[11].vertex[2].y = 0.25;
+    plgs[11].vertex[2].z = -0.25;
+    plgs[11].vertex[3].x = 0.25;
+    plgs[11].vertex[3].y = 0.25;
+    plgs[11].vertex[3].z = -0.25;
 
 	return plgs;
 }
@@ -609,10 +606,10 @@ double computeFormFactorForPatches(patch p1, patch p2) {
 		//TODO: add visibility function
 		//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 		double iter_res = 0;
-        //point on_p1 = randomPoint(p1);
-        //point on_p2 = randomPoint(p2);
-        point on_p1 = randomPointInSquare(p1);
-        point on_p2 = randomPointInSquare(p2);
+        point on_p1 = randomPoint(p1);
+        point on_p2 = randomPoint(p2);
+        //point on_p1 = randomPointInSquare(p1);
+        //point on_p2 = randomPointInSquare(p2);
         point r = sub(on_p1, on_p2);
         iter_res = cosV(r, p2.normal);
         iter_res *= cosV(mult(r, -1), p1.normal);
@@ -621,15 +618,6 @@ double computeFormFactorForPatches(patch p1, patch p2) {
     }
     result /= MONTE_KARLO_ITERATIONS_COUNT;
     result /= M_PI;
-	/*double iter_res = 0;
-	point on_p1 = sum(p1.vertex[0], mult(sub(p1.vertex[2], p1.vertex[0]), 0.5));
-	point on_p2 = sum(p2.vertex[0], mult(sub(p2.vertex[2], p2.vertex[0]), 0.5));
-	point r = sub(on_p1, on_p2);
-	iter_res = cosV(r, p2.normal);
-	iter_res *= cosV(mult(r, -1), p1.normal);
-	iter_res /= M_PI;
-	iter_res /= length(r) * length(r);
-	printf("dif: %lf\n", result - iter_res);*/
     return result * square(p1) * square(p2);
 }
 
@@ -668,10 +656,10 @@ int computeRadiosity(patch_radiosity *result, double ** ff,
 
 int drawScene(polygon * pls, patched_polygon * plgs, int polygonCount,
 				patch_radiosity *radio, int patchCount, HDC hdc) {
-	point cam_center = {1.5, 0, 0};
-    point cam_top = {0.5, 0, 1};
-    point cam_front = {0.5, 0, 0};
-    point cam_right = {0.5, 1, 0};
+	point cam_center = {1.7, 0, 0};
+    point cam_top = {0.7, 0, 1};
+    point cam_front = {0.7, 0, 0};
+    point cam_right = {0.7, 1, 0};
 
 	polygon screen = {calloc(3, sizeof(point)), sub(cam_front, cam_center), 3};
 	screen.vertex[0] = cam_top;
@@ -732,8 +720,10 @@ int compar (const void* p1, const void* p2) {
     com_pare cp2 = *(com_pare *)p2;
     if (cp2.distance < cp1.distance) {
 		return -1;
-    } else {
+    } else if (cp2.distance > cp1.distance){
     	return 1;
+    } else {
+    	return rand() % 3 - 1;
     }
 }
 
