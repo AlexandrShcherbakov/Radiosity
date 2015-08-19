@@ -60,15 +60,15 @@ extern "C" {
     int radiosityMain(HDC hdc);
 
 ///Function returns array of patches for current quadrangle
-    patched_polygon getPatchesFromQuadrangle(polygon plg, int amountOfPatches);
+    int createPatchesFromQuadrangle(int polygonIndex, int ptCount);
     ///plg: current polygon
     ///amountOfPatches: amount of patches in one line
 
 ///Computes form-factor matrix for scene
-	double ** computeFormFactorForScene(patched_polygon * plgs, int polygonCount);
+	int computeFormFactorForScene();
 
 ///Computes form-factor for two polygons
-    int computeFormFactorForPolygons(patched_polygon p1, patched_polygon p2, double **FF, int offset1, int offset2);
+    int computeFormFactorForPolygons(int p1, int p2);
 
 ///Computes form-factor for two patches
 	double computeFormFactorForPatches(patch p1, patch p2);
@@ -77,12 +77,10 @@ extern "C" {
 	polygon * hardcodedPolygons();
 
 ///Computes radiosity for scene
-    int computeRadiosity(patch_radiosity *result, double ** ff,
-					int patchesCount, int iterCount);
+    int computeRadiosity(int iterCount);
 
 ///Draws scene on screen
-	int drawScene(polygon * pls, patched_polygon * plgs, int polygonCount,
-				patch_radiosity *radio, int patchCount, HDC hdc);
+	int drawScene(HDC hdc);
 
 
 
@@ -113,7 +111,7 @@ extern "C" {
     point normal(polygon p);
 
 ///Center of weightes
-	point center(polygon p);
+	point center(patch p);
 
 ///Random point in square
 	point randomPointInSquare(polygon p);
@@ -122,7 +120,7 @@ extern "C" {
 	point polarizePointInPolygon(polygon pl, point pnt);
 
 ///Random point in polygon
-	point randomPoint(polygon p);
+	point randomPoint(patch p);
 
 ///Scalar multiplication for two vectors
 	double multS(point p1, point p2);
@@ -148,7 +146,7 @@ extern "C" {
 ///
 enum {
 	POINTS_IN_QUADRANGLE=4,
-    MONTE_KARLO_ITERATIONS_COUNT=1000,
+    MONTE_KARLO_ITERATIONS_COUNT=200,
     SCREEN_WIDTH=600,
     SCREEN_HEIGHT=600,
     SCALE_CONST=300
@@ -179,7 +177,7 @@ static int polygonCount;
 static int patchCount;
 
 ///Array of offsets for index of patch
-static int *pt_ind_offsets;
+static int *ptindoffsets;
 
 #ifdef __cplusplus
 }

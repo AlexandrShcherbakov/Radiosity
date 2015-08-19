@@ -24,10 +24,12 @@ int radiosityMain(HDC hdc) {
 	clock_t tm = clock();
 	#endif // OPTIMIZE_OUTPUT
 
-	int PLG = 12;
-    polygon * hard = hardcodedPolygons();
-    patched_polygon plgs[PLG];
-    int k = 3;
+	polygonCount = 12;
+    poly = hardcodedPolygons();
+    pt_poly = calloc(polygonCount, sizeof(*pt_poly));
+    ptindoffsets = calloc(polygonCount + 1, sizeof(*pt_poly));
+    ptindoffsets[0] = 0;
+    int k = 7;
 
     #ifdef OPTIMIZE_OUTPUT
     printf("Time for prepare scene: %d\n", clock() - tm);
@@ -35,9 +37,21 @@ int radiosityMain(HDC hdc) {
 	#endif // OPTIMIZE_OUTPUT
 
 
-	for (int i = 0; i < PLG; ++i) {
-        plgs[i] = getPatchesFromQuadrangle(hard[i], k);
+	for (int i = 0; i < polygonCount; ++i) {
+        createPatchesFromQuadrangle(i, k);
+        if (i > 0) {
+            ptindoffsets[i] = ptindoffsets[i - 1] + pt_poly[i - 1].axis1 *
+													pt_poly[i - 1].axis2;
+        }
 	}
+    patchCount = ptindoffsets[polygonCount] = ptindoffsets[polygonCount - 1] +
+			pt_poly[polygonCount - 1].axis1 * pt_poly[polygonCount - 1].axis2;
+
+    radio = calloc(patchCount, sizeof(*radio));
+    ff = calloc(patchCount, sizeof(*radio));
+    for (int i = 0; i < patchCount; ++i) {
+		ff[i] = calloc(patchCount, sizeof(*radio));
+    }
 
 	#ifdef NYAN_CAT
 	plgs[0] = getPatchesFromQuadrangle(hard[0], 33);
@@ -48,7 +62,7 @@ int radiosityMain(HDC hdc) {
 	tm = clock();
 	#endif // OPTIMIZE_OUTPUT
 
-    double ** ff = computeFormFactorForScene(plgs, PLG);
+    computeFormFactorForScene();
 
     #ifdef OPTIMIZE_OUTPUT
     printf("Time for compute form-factors: %d\n", clock() - tm);
@@ -61,165 +75,35 @@ int radiosityMain(HDC hdc) {
     }
 	#endif // OPTIMIZE_OUTPUT
 
-	int sideSize = 0;
-    for (int i = 0; i < PLG; ++i) {
-        sideSize += plgs[i].axis1 * plgs[i].axis2;
-    }
-
-    patch_radiosity * rad = calloc(sideSize, sizeof(*rad));
-    rad[k * k * 4 + k * k / 2].emmision.x = k * k;
-    rad[k * k * 4 + k * k / 2].emmision.y = k * k;
-    rad[k * k * 4 + k * k / 2].emmision.z = k * k;
-    for (int i = 0; i < sideSize; ++i) {
-        rad[i].reflectance.x = 0.75;
-        rad[i].reflectance.y = 0.75;
-        rad[i].reflectance.z = 0.75;
+    radio[k * k * 4 + k * k / 2].emmision.x = k * k;
+    radio[k * k * 4 + k * k / 2].emmision.y = k * k;
+    radio[k * k * 4 + k * k / 2].emmision.z = k * k;
+    for (int i = 0; i < patchCount; ++i) {
+        radio[i].reflectance.x = 0.75;
+        radio[i].reflectance.y = 0.75;
+        radio[i].reflectance.z = 0.75;
     }
     for (int i = k * k; i < 2 * k * k; ++i) {
-        rad[i].reflectance.x = 1;
-        rad[i].reflectance.y = 0;
-        rad[i].reflectance.z = 0;
+        radio[i].reflectance.x = 1;
+        radio[i].reflectance.y = 0;
+        radio[i].reflectance.z = 0;
     }
     for (int i = 2 * k * k; i < 3 * k * k; ++i) {
-        rad[i].reflectance.x = 0;
-        rad[i].reflectance.y = 1;
-        rad[i].reflectance.z = 0;
+        radio[i].reflectance.x = 0;
+        radio[i].reflectance.y = 1;
+        radio[i].reflectance.z = 0;
     }
-    for (int i = 6 * k * k; i < sideSize; ++i) {
-        rad[i].reflectance.x = 0.75;
-        rad[i].reflectance.y = 0.75;
-        rad[i].reflectance.z = 0;
-    }
-    //NYAN CAT!!!!!!!!!!!!!!!!!!!!!!!!!!!
-	#ifdef NYAN_CAT
-    for (int i = 0; i < 33 * 33; ++i) {
-		rad[i].reflectance.x = 16.0 / 255;
-		rad[i].reflectance.y = 68.0 / 255;
-		rad[i].reflectance.z = 118.0 / 255;
+    for (int i = 5 * k * k; i < patchCount; ++i) {
+        radio[i].reflectance.x = 0.75;
+        radio[i].reflectance.y = 0.75;
+        radio[i].reflectance.z = 0;
     }
 
-    int blackX[] = {5, 6, 7, 11, 12, 13, 21, 22, 23, 26, 27, 28,
-					5, 8, 10, 13, 20, 23, 25, 28,
-					5, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29,
-					6, 7, 19, 30,
-					6, 18, 22, 23, 24, 25, 26, 27, 28, 31,
-					6, 17, 22, 25, 28, 32,
-					4, 5, 6, 17, 32,
-					2, 3, 6, 17, 21, 22, 26, 28, 29, 32,
-					1, 6, 17, 22, 29, 32,
-					0, 3, 4, 5, 6, 17, 32,
-					0, 3, 6, 18, 31,
-					1, 2, 6, 18, 23, 24, 25, 26, 31,
-					6, 18, 22, 26, 27, 31,
-					6, 18, 21, 26, 28, 31,
-					6, 19, 20, 26, 29, 30,
-					6, 26,
-					6, 26,
-					6, 26,
-					7, 25,
-					8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24};
-    int blackY[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-					1, 1, 1, 1, 1, 1, 1, 1,
-					2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
-					3, 3, 3, 3,
-					4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
-					5, 5, 5, 5, 5, 5,
-					6, 6, 6, 6, 6,
-					7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
-					8, 8, 8, 8, 8, 8,
-					9, 9, 9, 9, 9, 9, 9,
-					10, 10, 10, 10, 10,
-					11, 11, 11, 11, 11, 11, 11, 11, 11,
-					12, 12, 12, 12, 12, 12,
-					13, 13, 13, 13, 13, 13,
-					14, 14, 14, 14, 14, 14,
-					15, 15,
-					16, 16,
-					17, 17,
-					18, 18,
-					19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19};
-    setColor(rad, blackX, blackY, 12 + 8 + 23 + 4 + 10 + 6 + 5 + 10 + 6 + 7 + 5 + 9 + 6 + 6 + 6 + 2 + 2 + 2 + 2 + 17, 0, 0, 0);
-	int grayX[] = {6, 7, 11, 12, 21, 22, 26, 27,
-					6, 7,
-					20, 21, 22, 23, 24, 25, 26, 27, 28, 29,
-					19, 20, 21, 29, 30,
-					18, 21, 23, 24, 26, 27, 29,
-					18, 21, 22, 23, 24, 25, 26, 27, 28, 29,
-					4, 5, 18, 19, 20, 23, 24, 25, 27, 30, 31,
-					2, 3, 4, 5, 18, 19, 20, 23, 24, 25, 26, 27, 30, 31,
-					1, 2, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
-					1, 2, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30,
-					19, 20, 21, 22, 27, 28, 29, 30,
-					19, 20, 21, 28, 29, 30,
-					19, 20, 29, 30};
-	int grayY[] = {1, 1, 1, 1, 1, 1, 1, 1,
-					2, 2,
-					3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
-					4, 4, 4, 4, 4,
-					5, 5, 5, 5, 5, 5, 5,
-					6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
-					7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
-					8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8,
-					9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9,
-					10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10,
-					11, 11, 11, 11, 11, 11, 11, 11,
-					12, 12, 12, 12, 12, 12,
-					13, 13, 13, 13};
-	setColor(rad, grayX, grayY, 8 + 2 + 10 + 5 + 7 + 10 + 11 + 14 + 16 + 14 + 8 + 6 + 4, 153.0 / 255, 153.0 / 255, 153.0 / 255);
-	int yellowX[] = {8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18,
-					7, 8, 9,
-					7, 8,
-					7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
-					25, 25, 25, 25,
-					7, 8, 24, 25,
-					7, 8, 9, 23, 24, 25,
-					8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24};
-	int yellowY[] = {3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
-					4, 4, 4,
-					5, 5,
-					6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
-					12, 13, 14, 15,
-					16, 16, 16, 16,
-					17, 17, 17, 17, 17, 17,
-					18, 18, 18, 18, 18, 18, 18, 18, 18, 18, 18, 18, 18, 18, 18, 18, 18};
-	setColor(rad, yellowX, yellowY, 11 + 3 + 2 + 10 + 4 + 4 + 6 + 17, 253.0 / 255, 204.0 / 255, 153.0 / 255);
-
-	setLine(rad, 10, 17, 4, 1.0, 153.0 / 255, 1.0);
-	setLine(rad, 9, 16, 5, 1.0, 153.0 / 255, 1.0);
-	setLine(rad, 8, 16, 6, 1.0, 153.0 / 255, 1.0);
-	setLine(rad, 8, 16, 7, 1.0, 153.0 / 255, 1.0);
-	setLine(rad, 8, 16, 8, 1.0, 153.0 / 255, 1.0);
-	setLine(rad, 8, 16, 9, 1.0, 153.0 / 255, 1.0);
-	setLine(rad, 8, 17, 10, 1.0, 153.0 / 255, 1.0);
-	setLine(rad, 8, 17, 11, 1.0, 153.0 / 255, 1.0);
-	setLine(rad, 8, 17, 12, 1.0, 153.0 / 255, 1.0);
-	setLine(rad, 8, 17, 13, 1.0, 153.0 / 255, 1.0);
-	setLine(rad, 8, 18, 14, 1.0, 153.0 / 255, 1.0);
-	setLine(rad, 8, 24, 15, 1.0, 153.0 / 255, 1.0);
-	setLine(rad, 9, 23, 16, 1.0, 153.0 / 255, 1.0);
-	setLine(rad, 10, 22, 17, 1.0, 153.0 / 255, 1.0);
-	setLine(rad, 23, 24, 12, 1.0, 153.0 / 255, 1.0);
-	setLine(rad, 22, 24, 13, 1.0, 153.0 / 255, 1.0);
-	setLine(rad, 21, 24, 14, 1.0, 153.0 / 255, 1.0);
-
-	int pinkX[] = {10, 13, 9, 15, 11, 14, 22, 10, 15, 18};
-	int pinkY[] = {5, 6, 8, 9, 10, 12, 14, 15, 16, 16};
-	setColor(rad, pinkX, pinkY, 10, 238.0 / 255, 54.0 / 255, 150.0 / 255);
-
-	int fpinkX[] = {19, 20, 19, 20, 30, 31, 30, 31};
-	int fpinkY[] = {5, 5, 6, 6, 5, 5, 6, 6};
-	setColor(rad, fpinkX, fpinkY, 8, 245.0 / 255, 151.0 / 255, 153.0 / 255);
-
-	int whiteX[] = {21, 28};
-	int whiteY[] = {8, 8};
-	setColor(rad, whiteX, whiteY, 2, 1.0, 1.0, 1.0);
-	#endif
-    //END NYAN CAT
     #ifdef OPTIMIZE_OUTPUT
 	tm = clock();
 	#endif // OPTIMIZE_OUTPUT
 
-    computeRadiosity(rad, ff, sideSize, 2);
+    computeRadiosity(2);
 
     #ifdef OPTIMIZE_OUTPUT
     printf("Time for compute radiosity: %d\n", clock() - tm);
@@ -230,7 +114,7 @@ int radiosityMain(HDC hdc) {
 	tm = clock();
 	#endif // OPTIMIZE_OUTPUT
 
-    drawScene(hard, plgs, PLG, rad, sideSize, hdc);
+    drawScene(hdc);
 
     #ifdef OPTIMIZE_OUTPUT
     printf("Time for draw scene: %d\n", clock() - tm);
@@ -239,25 +123,9 @@ int radiosityMain(HDC hdc) {
 
 }
 
-void setColor(patch_radiosity * rad, int *X, int *Y, int count, double R, double G, double B) {
-    for (int i = 0; i < count; ++i) {
-		rad[X[i] + (Y[i] + 6) * 33].reflectance.x = R;
-		rad[X[i] + (Y[i] + 6) * 33].reflectance.y = G;
-		rad[X[i] + (Y[i] + 6) * 33].reflectance.z = B;
-    }
-}
-
-void setLine(patch_radiosity * rad, int X1, int X2, int Y, double R, double G, double B) {
-	for (int i = X1; i <= X2; ++i) {
-		rad[i + (Y + 6) * 33].reflectance.x = R;
-		rad[i + (Y + 6) * 33].reflectance.y = G;
-		rad[i + (Y + 6) * 33].reflectance.z = B;
-	}
-}
-
 
 polygon * hardcodedPolygons() {
-	polygon * plgs = calloc(12, sizeof(*plgs));
+	polygon * plgs = calloc(polygonCount, sizeof(*plgs));
 
 	//Back wall
     plgs[0].vertex = calloc(POINTS_IN_QUADRANGLE, sizeof(point));
@@ -491,26 +359,26 @@ polygon * hardcodedPolygons() {
 	return plgs;
 }
 
-patched_polygon getPatchesFromQuadrangle(polygon plg, int amountOfPatches) {
+int createPatchesFromQuadrangle(int polygonIndex, int ptCount) {
     //Initialize step vectors
     point stepV[3];
     for (int i = 1; i < 4; ++i) {
-        stepV[i - 1] = mult(sub(plg.vertex[i], plg.vertex[0]),
-                             1.0 / amountOfPatches);
+        stepV[i - 1] = mult(sub(poly[polygonIndex].vertex[i],
+								poly[polygonIndex].vertex[0]), 1.0 / ptCount);
     }
 
     //Create matrix of polygons
-    patch ** patches = calloc(amountOfPatches, sizeof(*patches));
-    for (int i = 0; i < amountOfPatches; ++i) {
-        patches[i] = calloc(amountOfPatches, sizeof(*patches[i]));
-        for (int j = 0; j < amountOfPatches; ++j) {
+    patch ** patches = calloc(ptCount, sizeof(*patches));
+    for (int i = 0; i < ptCount; ++i) {
+        patches[i] = calloc(ptCount, sizeof(*patches[i]));
+        for (int j = 0; j < ptCount; ++j) {
             patches[i][j].vertex = calloc(POINTS_IN_QUADRANGLE,
                                           sizeof(*patches[i][j].vertex));
 			patches[i][j].length = POINTS_IN_QUADRANGLE;
-			patches[i][j].normal = plg.normal;
+			patches[i][j].normal = poly[polygonIndex].normal;
             if (i == 0) {
                 if (j == 0) {
-                    patches[i][j].vertex[0] = plg.vertex[0];
+                    patches[i][j].vertex[0] = poly[polygonIndex].vertex[0];
                     patches[i][j].vertex[1] = sum(patches[i][j].vertex[0], stepV[0]);
                     patches[i][j].vertex[2] = sum(patches[i][j].vertex[0], stepV[1]);
                     patches[i][j].vertex[3] = sum(patches[i][j].vertex[0], stepV[2]);
@@ -535,50 +403,36 @@ patched_polygon getPatchesFromQuadrangle(polygon plg, int amountOfPatches) {
             }
         }
     }
-    patched_polygon result = {patches, amountOfPatches, amountOfPatches};
-    return result;
+    pt_poly[polygonIndex].patches = patches;
+    pt_poly[polygonIndex].axis1 = pt_poly[polygonIndex].axis2 = ptCount;
 }
 
 
-double ** computeFormFactorForScene(patched_polygon * plgs, int polygonCount) {
-	//Initialize Form-Factor
-    double ** FF;
-    int sideSize = 0;
+int computeFormFactorForScene() {
+    //int offset1 = 0;
     for (int i = 0; i < polygonCount; ++i) {
-        sideSize += plgs[i].axis1 * plgs[i].axis2;
-    }
-    FF = calloc(sideSize, sizeof(*FF));
-    for (int i = 0; i < sideSize; ++i) {
-        FF[i] = calloc(sideSize, sizeof(*FF[i]));
-    }
-    int offset1 = 0;
-    for (int i = 0; i < polygonCount; ++i) {
-        int offset2 = offset1 + plgs[i].axis1 * plgs[i].axis2;
+        //int offset2 = offset1 + plgs[i].axis1 * plgs[i].axis2;
         for (int j = i + 1; j < polygonCount; ++j) {
-			printf("%d %d\n", i, j);
-            computeFormFactorForPolygons(plgs[i], plgs[j], FF, offset1, offset2);
-            offset2 += plgs[j].axis1 * plgs[j].axis2;
+            computeFormFactorForPolygons(i, j);
+            //offset2 += plgs[j].axis1 * plgs[j].axis2;
         }
-        offset1 += plgs[i].axis1 * plgs[i].axis2;
+        //offset1 += plgs[i].axis1 * plgs[i].axis2;
     }
-    return FF;
 }
 
 
-int computeFormFactorForPolygons(patched_polygon p1, patched_polygon p2,
-								double ** FF, int offset1, int offset2) {
-    for (int i1 = 0; i1 < p1.axis1; ++i1) {
-        for (int j1 = 0; j1 < p1.axis2; ++j1) {
-            for (int i2 = 0; i2 < p2.axis1; ++i2) {
-                for (int j2 = 0; j2 < p2.axis2; ++j2) {
-                    FF[i1 * p1.axis2 + j1 + offset1][i2 * p2.axis2 + j2 + offset2] =
-                    computeFormFactorForPatches(p1.patches[i1][j1], p2.patches[i2][j2]);
-                    FF[i2 * p2.axis2 + j2 + offset2][i1 * p1.axis2 + j1 + offset1] =
-						FF[i1 * p1.axis2 + j1 + offset1][i2 * p2.axis2 + j2 + offset2];
-                    FF[i1 * p1.axis2 + j1 + offset1][i2 * p2.axis2 + j2 + offset2]
-												/= square(p1.patches[i1][j1]);
-                    FF[i2 * p2.axis2 + j2 + offset2][i1 * p1.axis2 + j1 + offset1]
-												/= square(p2.patches[i2][j2]);
+int computeFormFactorForPolygons(int p1, int p2) {
+    for (int i1 = 0; i1 < pt_poly[p1].axis1; ++i1) {
+        for (int j1 = 0; j1 < pt_poly[p1].axis2; ++j1) {
+            for (int i2 = 0; i2 < pt_poly[p2].axis1; ++i2) {
+                for (int j2 = 0; j2 < pt_poly[p2].axis2; ++j2) {
+					int index1 = i1 * pt_poly[p1].axis2 + j1 + ptindoffsets[p1];
+					int index2 = i2 * pt_poly[p2].axis2 + j2 + ptindoffsets[p2];
+                    ff[index1][index2] = computeFormFactorForPatches(pt_poly[p1].patches[i1][j1],
+																	pt_poly[p2].patches[i2][j2]);
+                    ff[index2][index1] = ff[index1][index2];
+                    ff[index1][index2] /= square(pt_poly[p1].patches[i1][j1]);
+                    ff[index2][index1] /= square(pt_poly[p2].patches[i2][j2]);
                 }
             }
         }
@@ -586,7 +440,7 @@ int computeFormFactorForPolygons(patched_polygon p1, patched_polygon p2,
 }
 
 
-double computeFormFactorForPatches(patch p1, patch p2, polygon *pl, int polygonCount) {
+double computeFormFactorForPatches(patch p1, patch p2) {
 	double result = 0;
     for (int i = 0; i < MONTE_KARLO_ITERATIONS_COUNT; ++i) {
 		//TODO: add visibility function
@@ -594,72 +448,70 @@ double computeFormFactorForPatches(patch p1, patch p2, polygon *pl, int polygonC
 		double iter_res = 0;
         point on_p1 = randomPoint(p1);
         point on_p2 = randomPoint(p2);
-        //point on_p1 = randomPointInSquare(p1);
-        //point on_p2 = randomPointInSquare(p2);
         point r = sub(on_p1, on_p2);
         iter_res = cosV(r, p2.normal);
         iter_res *= cosV(mult(r, -1), p1.normal);
-		iter_res /= length(r) * length(r);
+        double lr = length(r);
+		iter_res /=  lr * lr;
 		result += iter_res;
     }
     result /= MONTE_KARLO_ITERATIONS_COUNT;
     result /= M_PI;
-    return result * square(p1) * square(p2);
+	result *= square(p1) * square(p2);
+    return result;
 }
 
 
-int computeRadiosity(patch_radiosity *result, double ** ff,
-					int patchesCount, int iterCount) {
-	for (int i = 0; i < patchesCount; ++i)
+int computeRadiosity(int iterCount) {
+	for (int i = 0; i < patchCount; ++i)
 	{
-		result[i].excident = result[i].emmision;
-		result[i].emmision.x = 0;
-		result[i].emmision.y = 0;
-		result[i].emmision.z = 0;
-		result[i].deposit = sum(result[i].deposit, result[i].excident);
+		radio[i].excident = radio[i].emmision;
+		radio[i].emmision.x = 0;
+		radio[i].emmision.y = 0;
+		radio[i].emmision.z = 0;
+		radio[i].deposit = sum(radio[i].deposit, radio[i].excident);
 	}
 
 	for (int iter = 0; iter < iterCount; iter++) {
-		for (int i = 0; i < patchesCount; i++) {
-			result[i].incident.x = 0;
-			result[i].incident.y = 0;
-			result[i].incident.z = 0;
-			for (int j = 0; j < patchesCount; j++) {
-				result[i].incident = sum(result[i].incident,
-											mult(result[j].excident, ff[i][j]));
+		for (int i = 0; i < patchCount; i++) {
+			radio[i].incident.x = 0;
+			radio[i].incident.y = 0;
+			radio[i].incident.z = 0;
+			for (int j = 0; j < patchCount; j++) {
+				radio[i].incident = sum(radio[i].incident,
+											mult(radio[j].excident, ff[i][j]));
 			}
 		}
-		for (int i = 0; i < patchesCount; ++i) {
-			result[i].excident.x = result[i].incident.x * result[i].reflectance.x;
-			result[i].excident.y = result[i].incident.y * result[i].reflectance.y;
-			result[i].excident.z = result[i].incident.z * result[i].reflectance.z;
-			result[i].deposit = sum(result[i].deposit, result[i].excident);
+		for (int i = 0; i < patchCount; ++i) {
+			radio[i].excident.x = radio[i].incident.x * radio[i].reflectance.x;
+			radio[i].excident.y = radio[i].incident.y * radio[i].reflectance.y;
+			radio[i].excident.z = radio[i].incident.z * radio[i].reflectance.z;
+			radio[i].deposit = sum(radio[i].deposit, radio[i].excident);
 		}
 	}
 }
 
 
-int drawScene(polygon * pls, patched_polygon * plgs, int polygonCount,
-				patch_radiosity *radio, int patchCount, HDC hdc) {
+int drawScene(HDC hdc) {
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glLoadIdentity();//load identity matrix
 
-    glTranslatef(0.0f,-0.5f,-3.8f);//move forward 4 units
+    glTranslatef(0.0f,-0.3f,-3.8f);//move forward 4 units
 
     int offset = 0;
     for (int i = 0; i < polygonCount; ++i) {
 		if (i == 5) continue;
-		for (int i1 = 0; i1 < plgs[i].axis1; ++i1) {
-			for (int j1 = 0; j1 < plgs[i].axis2; ++j1) {
-				int pt_ind = offset;// + i1 * plgs[i].axis2 + j1;
+		for (int i1 = 0; i1 < pt_poly[i].axis1; ++i1) {
+			for (int j1 = 0; j1 < pt_poly[i].axis2; ++j1) {
+				int pt_ind = offset;
 
 				//Add gamma-correction
 				glColor3f(pow(radio[pt_ind].deposit.x, 1.0 / 2),
 						  pow(radio[pt_ind].deposit.y, 1.0 / 2),
 						  pow(radio[pt_ind].deposit.z, 1.0 / 2));
 				glBegin(GL_POLYGON);
-				patch loc_pt = plgs[i].patches[i1][j1];
+				patch loc_pt = pt_poly[i].patches[i1][j1];
 				for (int i2 = 0; i2 < loc_pt.length; ++i2) {
                     glVertex3d(loc_pt.vertex[i2].y, loc_pt.vertex[i2].z + 0.2, loc_pt.vertex[i2].x);
 				}
@@ -811,7 +663,7 @@ point normal(polygon p) {
 }
 
 
-point center(polygon p) {
+point center(patch p) {
 	#ifdef OPTIMIZE_OUTPUT1
 	count[7]++;
 	#endif // OPTIMIZE_OUTPUT1
@@ -837,7 +689,7 @@ point polarizePointInPolygon(polygon pl, point pnt) {
     return sum(c, sub(c, pnt));
 }
 
-point randomPoint(polygon p) {
+point randomPoint(patch p) {
 	#ifdef OPTIMIZE_OUTPUT1
 	count[8]++;
 	#endif // OPTIMIZE_OUTPUT1
