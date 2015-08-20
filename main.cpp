@@ -95,8 +95,8 @@ int WINAPI WinMain (HINSTANCE hThisInstance,
 	glEnable(GL_DEPTH_TEST);
     glLoadIdentity();//load identity matrix
 
-    radiosityMain(hdc);
-
+    radiosityMain();
+drawScene(hdc);
     /* Run the message loop. It will run until GetMessage() returns 0 */
     while (GetMessage (&messages, NULL, 0, 0))
     {
@@ -105,7 +105,6 @@ int WINAPI WinMain (HINSTANCE hThisInstance,
         /* Send message to WindowProcedure */
         DispatchMessage(&messages);
     }
-
     /* The program return-value is 0 - The value that PostQuitMessage() gave */
     return messages.wParam;
 }

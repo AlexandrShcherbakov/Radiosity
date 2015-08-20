@@ -57,7 +57,7 @@ extern "C" {
 ///
 
 ///Main function of radiosity implementation
-    int radiosityMain(HDC hdc);
+    int radiosityMain();
 
 ///Function returns array of patches for current quadrangle
     int createPatchesFromQuadrangle(int polygonIndex, int ptCount);

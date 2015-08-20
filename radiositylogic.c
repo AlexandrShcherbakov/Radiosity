@@ -14,7 +14,7 @@
 #include <time.h>
 #endif
 
-int radiosityMain(HDC hdc) {
+int radiosityMain() {
 
 	#ifdef OPTIMIZE_OUTPUT
 	clock_t tm = clock();
@@ -25,7 +25,7 @@ int radiosityMain(HDC hdc) {
     pt_poly = calloc(polygonCount, sizeof(*pt_poly));
     ptindoffsets = calloc(polygonCount + 1, sizeof(*pt_poly));
     ptindoffsets[0] = 0;
-    int k = 8;
+    int k = 4;
 
     #ifdef OPTIMIZE_OUTPUT
     printf("Time for prepare scene: %d\n", clock() - tm);
@@ -65,7 +65,26 @@ int radiosityMain(HDC hdc) {
 	tm = clock();
 	#endif // OPTIMIZE_OUTPUT
 
-    computeFormFactorForScene();
+	char ff_file[50];
+    sprintf(ff_file, "ff\\%d", patchCount);
+    FILE *formfactfile;
+    if ((formfactfile = fopen(ff_file, "r")) == NULL) {
+		computeFormFactorForScene();
+        formfactfile = fopen(ff_file, "w");
+        for (int i = 0; i < patchCount; ++i) {
+            for (int j = 0; j < patchCount; ++j) {
+                fprintf(formfactfile, "%lf ", ff[i][j]);
+            }
+            fprintf(formfactfile, "\n");
+        }
+    } else {
+    	printf("Form-factor already computed\n");
+		for (int i = 0; i < patchCount; ++i) {
+            for (int j = 0; j < patchCount; ++j) {
+                fscanf(formfactfile, "%lf ", &ff[i][j]);
+            }
+        }
+    }
 
     #ifdef OPTIMIZE_OUTPUT
     printf("Time for compute form-factors: %d\n", clock() - tm);
@@ -130,8 +149,6 @@ int radiosityMain(HDC hdc) {
 	#ifdef OPTIMIZE_OUTPUT
 	tm = clock();
 	#endif // OPTIMIZE_OUTPUT
-
-    drawScene(hdc);
 
     #ifdef OPTIMIZE_OUTPUT
     printf("Time for draw scene: %d\n", clock() - tm);
@@ -380,18 +397,18 @@ polygon * hardcodedPolygons() {
 	plgs[12].normal.y = -sqrt(2.0) / 2.0;
 	plgs[12].normal.z = 0;
 	plgs[12].length = POINTS_IN_QUADRANGLE;
-	plgs[12].vertex[0].x = -0.75;
-    plgs[12].vertex[0].y = -1;
-    plgs[12].vertex[0].z = -1;
-    plgs[12].vertex[1].x = -0.75;
-    plgs[12].vertex[1].y = -1;
-    plgs[12].vertex[1].z = -1 + sqrt(0.125);
-    plgs[12].vertex[2].x = -1;
-    plgs[12].vertex[2].y = -0.75;
-    plgs[12].vertex[2].z = -1 + sqrt(0.125);
-    plgs[12].vertex[3].x = -1;
-    plgs[12].vertex[3].y = -0.75;
-    plgs[12].vertex[3].z = -1;
+	plgs[12].vertex[0].x = -0.65;
+    plgs[12].vertex[0].y = -0.9;
+    plgs[12].vertex[0].z = -0.9;
+    plgs[12].vertex[1].x = -0.65;
+    plgs[12].vertex[1].y = -0.9;
+    plgs[12].vertex[1].z = -0.9 + sqrt(0.125);
+    plgs[12].vertex[2].x = -0.9;
+    plgs[12].vertex[2].y = -0.65;
+    plgs[12].vertex[2].z = -0.9 + sqrt(0.125);
+    plgs[12].vertex[3].x = -0.9;
+    plgs[12].vertex[3].y = -0.65;
+    plgs[12].vertex[3].z = -0.9;
 
 
 	//right-back wall
@@ -400,18 +417,18 @@ polygon * hardcodedPolygons() {
 	plgs[13].normal.y = sqrt(2.0) / 2.0;
 	plgs[13].normal.z = 0;
 	plgs[13].length = POINTS_IN_QUADRANGLE;
-	plgs[13].vertex[0].x = -1;
-    plgs[13].vertex[0].y = -0.75;
-    plgs[13].vertex[0].z = -1;
-    plgs[13].vertex[1].x = -1;
-    plgs[13].vertex[1].y = -0.75;
-    plgs[13].vertex[1].z = -1 + sqrt(0.125);
-    plgs[13].vertex[2].x = -0.75;
-    plgs[13].vertex[2].y = -0.5;
-    plgs[13].vertex[2].z = -1 + sqrt(0.125);
-    plgs[13].vertex[3].x = -0.75;
-    plgs[13].vertex[3].y = -0.5;
-    plgs[13].vertex[3].z = -1;
+	plgs[13].vertex[0].x = -0.9;
+    plgs[13].vertex[0].y = -0.65;
+    plgs[13].vertex[0].z = -0.9;
+    plgs[13].vertex[1].x = -0.9;
+    plgs[13].vertex[1].y = -0.65;
+    plgs[13].vertex[1].z = -0.9 + sqrt(0.125);
+    plgs[13].vertex[2].x = -0.65;
+    plgs[13].vertex[2].y = -0.4;
+    plgs[13].vertex[2].z = -0.9 + sqrt(0.125);
+    plgs[13].vertex[3].x = -0.65;
+    plgs[13].vertex[3].y = -0.4;
+    plgs[13].vertex[3].z = -0.9;
 
 
     //bottom wall
@@ -420,18 +437,18 @@ polygon * hardcodedPolygons() {
 	plgs[14].normal.y = 0;
 	plgs[14].normal.z = -1;
 	plgs[14].length = POINTS_IN_QUADRANGLE;
-	plgs[14].vertex[0].x = -0.75;
-    plgs[14].vertex[0].y = -1;
-    plgs[14].vertex[0].z = -1;
-    plgs[14].vertex[1].x = -1;
-    plgs[14].vertex[1].y = -0.75;
-    plgs[14].vertex[1].z = -1;
-    plgs[14].vertex[2].x = -0.75;
-    plgs[14].vertex[2].y = -0.5;
-    plgs[14].vertex[2].z = -1;
-    plgs[14].vertex[3].x = -0.5;
-    plgs[14].vertex[3].y = -0.75;
-    plgs[14].vertex[3].z = -1;
+	plgs[14].vertex[0].x = -0.65;
+    plgs[14].vertex[0].y = -0.9;
+    plgs[14].vertex[0].z = -0.9;
+    plgs[14].vertex[1].x = -0.9;
+    plgs[14].vertex[1].y = -0.65;
+    plgs[14].vertex[1].z = -0.9;
+    plgs[14].vertex[2].x = -0.65;
+    plgs[14].vertex[2].y = -0.4;
+    plgs[14].vertex[2].z = -0.9;
+    plgs[14].vertex[3].x = -0.4;
+    plgs[14].vertex[3].y = -0.65;
+    plgs[14].vertex[3].z = -0.9;
 
 
 	//left-front wall
@@ -440,18 +457,18 @@ polygon * hardcodedPolygons() {
 	plgs[15].normal.y = -sqrt(2.0) / 2;
 	plgs[15].normal.z = 0;
 	plgs[15].length = POINTS_IN_QUADRANGLE;
-	plgs[15].vertex[0].x = -0.75;
-    plgs[15].vertex[0].y = -1;
-    plgs[15].vertex[0].z = -1;
-    plgs[15].vertex[1].x = -0.75;
-    plgs[15].vertex[1].y = -1;
-    plgs[15].vertex[1].z = -1 + sqrt(0.125);
-    plgs[15].vertex[2].x = -0.5;
-    plgs[15].vertex[2].y = -0.75;
-    plgs[15].vertex[2].z = -1 + sqrt(0.125);
-    plgs[15].vertex[3].x = -0.5;
-    plgs[15].vertex[3].y = -0.75;
-    plgs[15].vertex[3].z = -1;
+	plgs[15].vertex[0].x = -0.65;
+    plgs[15].vertex[0].y = -0.9;
+    plgs[15].vertex[0].z = -0.9;
+    plgs[15].vertex[1].x = -0.65;
+    plgs[15].vertex[1].y = -0.9;
+    plgs[15].vertex[1].z = -0.9 + sqrt(0.125);
+    plgs[15].vertex[2].x = -0.4;
+    plgs[15].vertex[2].y = -0.65;
+    plgs[15].vertex[2].z = -0.9 + sqrt(0.125);
+    plgs[15].vertex[3].x = -0.4;
+    plgs[15].vertex[3].y = -0.65;
+    plgs[15].vertex[3].z = -0.9;
 
 
     //right-front wall
@@ -460,18 +477,18 @@ polygon * hardcodedPolygons() {
 	plgs[16].normal.y = sqrt(2.0) / 2;
 	plgs[16].normal.z = 0;
 	plgs[16].length = POINTS_IN_QUADRANGLE;
-	plgs[16].vertex[0].x = -0.5;
-    plgs[16].vertex[0].y = -0.75;
-    plgs[16].vertex[0].z = -1;
-    plgs[16].vertex[1].x = -0.5;
-    plgs[16].vertex[1].y = -0.75;
-    plgs[16].vertex[1].z = -1 + sqrt(0.125);
-    plgs[16].vertex[2].x = -0.75;
-    plgs[16].vertex[2].y = -0.5;
-    plgs[16].vertex[2].z = -1 + sqrt(0.125);
-    plgs[16].vertex[3].x = -0.75;
-    plgs[16].vertex[3].y = -0.5;
-    plgs[16].vertex[3].z = -1;
+	plgs[16].vertex[0].x = -0.4;
+    plgs[16].vertex[0].y = -0.65;
+    plgs[16].vertex[0].z = -0.9;
+    plgs[16].vertex[1].x = -0.4;
+    plgs[16].vertex[1].y = -0.65;
+    plgs[16].vertex[1].z = -0.9 + sqrt(0.125);
+    plgs[16].vertex[2].x = -0.65;
+    plgs[16].vertex[2].y = -0.4;
+    plgs[16].vertex[2].z = -0.9 + sqrt(0.125);
+    plgs[16].vertex[3].x = -0.65;
+    plgs[16].vertex[3].y = -0.4;
+    plgs[16].vertex[3].z = -0.9;
 
 
     //top wall
@@ -480,18 +497,18 @@ polygon * hardcodedPolygons() {
 	plgs[17].normal.y = 0;
 	plgs[17].normal.z = 1;
 	plgs[17].length = POINTS_IN_QUADRANGLE;
-	plgs[17].vertex[0].x = -0.75;
-    plgs[17].vertex[0].y = -1;
-    plgs[17].vertex[0].z = -1 + sqrt(0.125);
-    plgs[17].vertex[1].x = -1;
-    plgs[17].vertex[1].y = -0.75;
-    plgs[17].vertex[1].z = -1 + sqrt(0.125);
-    plgs[17].vertex[2].x = -0.75;
-    plgs[17].vertex[2].y = -0.5;
-    plgs[17].vertex[2].z = -1 + sqrt(0.125);
-    plgs[17].vertex[3].x = -0.5;
-    plgs[17].vertex[3].y = -0.75;
-    plgs[17].vertex[3].z = -1 + sqrt(0.125);
+	plgs[17].vertex[0].x = -0.65;
+    plgs[17].vertex[0].y = -0.9;
+    plgs[17].vertex[0].z = -0.9 + sqrt(0.125);
+    plgs[17].vertex[1].x = -0.9;
+    plgs[17].vertex[1].y = -0.65;
+    plgs[17].vertex[1].z = -0.9 + sqrt(0.125);
+    plgs[17].vertex[2].x = -0.65;
+    plgs[17].vertex[2].y = -0.4;
+    plgs[17].vertex[2].z = -0.9 + sqrt(0.125);
+    plgs[17].vertex[3].x = -0.4;
+    plgs[17].vertex[3].y = -0.65;
+    plgs[17].vertex[3].z = -0.9 + sqrt(0.125);
 
 	return plgs;
 }
@@ -546,12 +563,16 @@ int createPatchesFromQuadrangle(int polygonIndex, int ptCount) {
 
 
 int computeFormFactorForScene() {
+	glColor3f(0.0, 1.0, 1.0);
+	glPointSize(1.5);
+	glBegin(GL_POINTS);
     for (int i = 0; i < polygonCount; ++i) {
         for (int j = i + 1; j < polygonCount; ++j) {
             computeFormFactorForPolygons(i, j);
             printf("%d %d\n", i, j);
         }
     }
+    glEnd();
 }
 
 
@@ -581,6 +602,9 @@ double computeFormFactorForPatches(patch p1, patch p2, int pl1, int pl2) {
 		double iter_res = 0;
         point on_p1 = randomPoint(p1);
         point on_p2 = randomPoint(p2);
+		if (pl1 != 5)
+			glVertex3d(on_p1.y, on_p1.z + 0.2, on_p1.x);
+		//glVertex3d(on_p2.y, on_p2.z + 0.2, on_p2.x);
 
 		//Visibility function
 		int flag = 0;
@@ -664,7 +688,7 @@ int drawScene(HDC hdc) {
 			}
         }
     }
-
+	computeFormFactorForScene();
     SwapBuffers(hdc);
 }
 
