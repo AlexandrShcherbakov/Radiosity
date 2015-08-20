@@ -71,7 +71,7 @@ extern "C" {
     int computeFormFactorForPolygons(int p1, int p2);
 
 ///Computes form-factor for two patches
-	double computeFormFactorForPatches(patch p1, patch p2);
+	double computeFormFactorForPatches(patch p1, patch p2, int pl1, int pl2);
 
 ///Returns scene which writen in code
 	polygon * hardcodedPolygons();
@@ -144,6 +144,7 @@ extern "C" {
 ///
 ///CONSTANTS
 ///
+
 enum {
 	POINTS_IN_QUADRANGLE=4,
     MONTE_KARLO_ITERATIONS_COUNT=200,

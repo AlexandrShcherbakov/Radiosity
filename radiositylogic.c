@@ -52,7 +52,8 @@ int radiosityMain(HDC hdc) {
     for (int i = 0; i < patchCount; ++i) {
 		ff[i] = calloc(patchCount, sizeof(*radio));
     }
-
+	//printf("%lf %lf %lf\n", pt_poly[10].patches[10][10].vertex[0].x, pt_poly[10].patches[10][10].vertex[0].y, pt_poly[10].patches[10][10].vertex[0].z);
+	//exit(0);
 	#ifdef NYAN_CAT
 	plgs[0] = getPatchesFromQuadrangle(hard[0], 33);
 	#endif
@@ -93,7 +94,7 @@ int radiosityMain(HDC hdc) {
         radio[i].reflectance.y = 1;
         radio[i].reflectance.z = 0;
     }
-    for (int i = 5 * k * k; i < patchCount; ++i) {
+    for (int i = 6 * k * k; i < patchCount; ++i) {
         radio[i].reflectance.x = 0.75;
         radio[i].reflectance.y = 0.75;
         radio[i].reflectance.z = 0;
@@ -125,7 +126,7 @@ int radiosityMain(HDC hdc) {
 
 
 polygon * hardcodedPolygons() {
-	polygon * plgs = calloc(polygonCount, sizeof(*plgs));
+	polygon * plgs = calloc(12, sizeof(*plgs));
 
 	//Back wall
     plgs[0].vertex = calloc(POINTS_IN_QUADRANGLE, sizeof(point));
@@ -244,7 +245,7 @@ polygon * hardcodedPolygons() {
 
 	//Back wall
     plgs[6].vertex = calloc(POINTS_IN_QUADRANGLE, sizeof(point));
-    plgs[6].normal.x = 1;
+    plgs[6].normal.x = -1;
     plgs[6].normal.y = 0;
     plgs[6].normal.z = 0;
     plgs[6].length = POINTS_IN_QUADRANGLE;
@@ -264,7 +265,7 @@ polygon * hardcodedPolygons() {
     //Left wall
 	plgs[7].vertex = calloc(POINTS_IN_QUADRANGLE, sizeof(point));
     plgs[7].normal.x = 0;
-    plgs[7].normal.y = 1;
+    plgs[7].normal.y = -1;
     plgs[7].normal.z = 0;
     plgs[7].length = POINTS_IN_QUADRANGLE;
 	plgs[7].vertex[0].x = 0.25;
@@ -283,7 +284,7 @@ polygon * hardcodedPolygons() {
     //Right wall
 	plgs[8].vertex = calloc(POINTS_IN_QUADRANGLE, sizeof(point));
     plgs[8].normal.x = 0;
-    plgs[8].normal.y = -1;
+    plgs[8].normal.y = 1;
     plgs[8].normal.z = 0;
     plgs[8].length = POINTS_IN_QUADRANGLE;
 	plgs[8].vertex[0].x = -0.25;
@@ -303,7 +304,7 @@ polygon * hardcodedPolygons() {
 	plgs[9].vertex = calloc(POINTS_IN_QUADRANGLE, sizeof(point));
     plgs[9].normal.x = 0;
     plgs[9].normal.y = 0;
-    plgs[9].normal.z = 1;
+    plgs[9].normal.z = -1;
     plgs[9].length = POINTS_IN_QUADRANGLE;
 	plgs[9].vertex[0].x = 0.25;
     plgs[9].vertex[0].y = -0.25;
@@ -322,7 +323,7 @@ polygon * hardcodedPolygons() {
 	plgs[10].vertex = calloc(POINTS_IN_QUADRANGLE, sizeof(point));
     plgs[10].normal.x = 0;
     plgs[10].normal.y = 0;
-    plgs[10].normal.z = -1;
+    plgs[10].normal.z = 1;
     plgs[10].length = POINTS_IN_QUADRANGLE;
 	plgs[10].vertex[0].x = 0.25;
     plgs[10].vertex[0].y = -0.25;
@@ -339,7 +340,7 @@ polygon * hardcodedPolygons() {
 
 	//Front wall
 	plgs[11].vertex = calloc(POINTS_IN_QUADRANGLE, sizeof(point));
-    plgs[11].normal.x = -1;
+    plgs[11].normal.x = 1;
     plgs[11].normal.y = 0;
     plgs[11].normal.z = 0;
     plgs[11].length = POINTS_IN_QUADRANGLE;
@@ -409,14 +410,11 @@ int createPatchesFromQuadrangle(int polygonIndex, int ptCount) {
 
 
 int computeFormFactorForScene() {
-    //int offset1 = 0;
     for (int i = 0; i < polygonCount; ++i) {
-        //int offset2 = offset1 + plgs[i].axis1 * plgs[i].axis2;
         for (int j = i + 1; j < polygonCount; ++j) {
             computeFormFactorForPolygons(i, j);
-            //offset2 += plgs[j].axis1 * plgs[j].axis2;
+            printf("%d %d\n", i, j);
         }
-        //offset1 += plgs[i].axis1 * plgs[i].axis2;
     }
 }
 
@@ -429,7 +427,7 @@ int computeFormFactorForPolygons(int p1, int p2) {
 					int index1 = i1 * pt_poly[p1].axis2 + j1 + ptindoffsets[p1];
 					int index2 = i2 * pt_poly[p2].axis2 + j2 + ptindoffsets[p2];
                     ff[index1][index2] = computeFormFactorForPatches(pt_poly[p1].patches[i1][j1],
-																	pt_poly[p2].patches[i2][j2]);
+																	pt_poly[p2].patches[i2][j2], p1, p2);
                     ff[index2][index1] = ff[index1][index2];
                     ff[index1][index2] /= square(pt_poly[p1].patches[i1][j1]);
                     ff[index2][index1] /= square(pt_poly[p2].patches[i2][j2]);
@@ -440,17 +438,28 @@ int computeFormFactorForPolygons(int p1, int p2) {
 }
 
 
-double computeFormFactorForPatches(patch p1, patch p2) {
+double computeFormFactorForPatches(patch p1, patch p2, int pl1, int pl2) {
 	double result = 0;
+	int cnt = 0;
     for (int i = 0; i < MONTE_KARLO_ITERATIONS_COUNT; ++i) {
-		//TODO: add visibility function
-		//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 		double iter_res = 0;
         point on_p1 = randomPoint(p1);
         point on_p2 = randomPoint(p2);
+
+		//Visibility function
+		int flag = 0;
+        for (int j = 0; j < polygonCount && !flag; ++j) {
+			if (j == pl1 || j == pl2) continue;
+			flag = checkIntersection(poly[j], on_p1, on_p2);
+        }
+        cnt += flag;
+		if (flag)
+			continue;
+
         point r = sub(on_p1, on_p2);
         iter_res = cosV(r, p2.normal);
         iter_res *= cosV(mult(r, -1), p1.normal);
+        if (iter_res < 0) continue;
         double lr = length(r);
 		iter_res /=  lr * lr;
 		result += iter_res;
@@ -497,14 +506,14 @@ int drawScene(HDC hdc) {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glLoadIdentity();//load identity matrix
 
-    glTranslatef(0.0f,-0.3f,-3.8f);//move forward 4 units
+    glTranslatef(0.0f,-0.4f,-3.8f);//move forward 4 units
 
     int offset = 0;
     for (int i = 0; i < polygonCount; ++i) {
 		if (i == 5) continue;
 		for (int i1 = 0; i1 < pt_poly[i].axis1; ++i1) {
 			for (int j1 = 0; j1 < pt_poly[i].axis2; ++j1) {
-				int pt_ind = offset;
+				int pt_ind = ptindoffsets[i] + pt_poly[i].axis2 * i1 + j1;
 
 				//Add gamma-correction
 				glColor3f(pow(radio[pt_ind].deposit.x, 1.0 / 2),
@@ -516,7 +525,6 @@ int drawScene(HDC hdc) {
                     glVertex3d(loc_pt.vertex[i2].y, loc_pt.vertex[i2].z + 0.2, loc_pt.vertex[i2].x);
 				}
 				glEnd();
-				offset++;
 			}
         }
     }
@@ -734,7 +742,7 @@ int inPolygon(polygon pl, point p) {
         sq += length(multV(sub(pl.vertex[i % pl.length], p),
 							sub(pl.vertex[i - 1], p)));
 	}
-	return abs(sq / 2 - square(pl)) < DBL_EPSILON;
+	return fabs(sq / 2 - square(pl)) < DBL_EPSILON;
 }
 
 
@@ -747,10 +755,10 @@ double distance(polygon pl, point p) {
 int checkIntersection(polygon pl, point p1, point p2) {
     point aug = sub(p2, p1);
     double d = -multS(pl.normal, pl.vertex[0]);
-    if (d < DBL_EPSILON) {
+    /*if (abs(d) < DBL_EPSILON) {
         return inPolygon(pl, p1);
-    }
-    double t = multS(pl.normal, aug) / -(multS(pl.normal, p1) + d);
+    }*/
+    double t =  -(d + multS(pl.normal, p1)) / multS(pl.normal, aug);
     if (t <= 0 || t > 1) {
         return 0;
     }
