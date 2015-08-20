@@ -14,10 +14,6 @@
 #include <time.h>
 #endif
 
-#ifdef OPTIMIZE_OUTPUT1
-long long count[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-#endif // OPTIMIZE_OUTPUT
-
 int radiosityMain(HDC hdc) {
 
 	#ifdef OPTIMIZE_OUTPUT
@@ -29,7 +25,7 @@ int radiosityMain(HDC hdc) {
     pt_poly = calloc(polygonCount, sizeof(*pt_poly));
     ptindoffsets = calloc(polygonCount + 1, sizeof(*pt_poly));
     ptindoffsets[0] = 0;
-    int k = 11;
+    int k = 8;
 
     #ifdef OPTIMIZE_OUTPUT
     printf("Time for prepare scene: %d\n", clock() - tm);
@@ -37,8 +33,15 @@ int radiosityMain(HDC hdc) {
 	#endif // OPTIMIZE_OUTPUT
 
 
-	for (int i = 0; i < polygonCount; ++i) {
+	for (int i = 0; i < 6; ++i) {
         createPatchesFromQuadrangle(i, k);
+        if (i > 0) {
+            ptindoffsets[i] = ptindoffsets[i - 1] + pt_poly[i - 1].axis1 *
+													pt_poly[i - 1].axis2;
+        }
+	}
+	for (int i = 6; i < polygonCount; ++i) {
+        createPatchesFromQuadrangle(i, k / 2);
         if (i > 0) {
             ptindoffsets[i] = ptindoffsets[i - 1] + pt_poly[i - 1].axis1 *
 													pt_poly[i - 1].axis2;
@@ -75,9 +78,18 @@ int radiosityMain(HDC hdc) {
     }
 	#endif // OPTIMIZE_OUTPUT
 
-    radio[k * k * 4 + k * k / 2].emmision.x = k * k;
-    radio[k * k * 4 + k * k / 2].emmision.y = k * k;
-    radio[k * k * 4 + k * k / 2].emmision.z = k * k;
+    radio[k * k * 4 + k * (k - 1) / 2].emmision.x = k * k / 4;
+    radio[k * k * 4 + k * (k - 1) / 2].emmision.y = k * k / 4;
+    radio[k * k * 4 + k * (k - 1) / 2].emmision.z = k * k / 4;
+    radio[k * k * 4 + k * (k - 1) / 2 - 1].emmision.x = k * k / 4;
+    radio[k * k * 4 + k * (k - 1) / 2 - 1].emmision.y = k * k / 4;
+    radio[k * k * 4 + k * (k - 1) / 2 - 1].emmision.z = k * k / 4;
+    radio[k * k * 4 + k * (k - 1) / 2 + k].emmision.x = k * k / 4;
+    radio[k * k * 4 + k * (k - 1) / 2 + k].emmision.y = k * k / 4;
+    radio[k * k * 4 + k * (k - 1) / 2 + k].emmision.z = k * k / 4;
+    radio[k * k * 4 + k * (k - 1) / 2 - 1 + k].emmision.x = k * k / 4;
+    radio[k * k * 4 + k * (k - 1) / 2 - 1 + k].emmision.y = k * k / 4;
+    radio[k * k * 4 + k * (k - 1) / 2 - 1 + k].emmision.z = k * k / 4;
     for (int i = 0; i < patchCount; ++i) {
         radio[i].reflectance.x = 0.75;
         radio[i].reflectance.y = 0.75;
@@ -93,12 +105,12 @@ int radiosityMain(HDC hdc) {
         radio[i].reflectance.y = 1;
         radio[i].reflectance.z = 0;
     }
-    for (int i = 6 * k * k; i < 12 * k * k; ++i) {
+    for (int i = 6 * k * k; i < 6 * k * k + 6 * k * k / 4; ++i) {
         radio[i].reflectance.x = 0.75;
         radio[i].reflectance.y = 0.75;
         radio[i].reflectance.z = 0;
     }
-    for (int i = 12 * k * k; i < patchCount; ++i) {
+    for (int i = 6 * k * k + 6 * k * k / 4; i < patchCount; ++i) {
 		radio[i].reflectance.x = 0;
         radio[i].reflectance.y = 250.0 / 255;
         radio[i].reflectance.z = 154.0 / 255;
@@ -654,59 +666,6 @@ int drawScene(HDC hdc) {
     }
 
     SwapBuffers(hdc);
-	/*point cam_center = {1.7, 0, 0};
-    point cam_top = {0.7, 0, 1};
-    point cam_front = {0.7, 0, 0};
-    point cam_right = {0.7, 1, 0};
-
-	polygon screen = {calloc(3, sizeof(point)), sub(cam_front, cam_center), 3};
-	screen.vertex[0] = cam_top;
-	screen.vertex[1] = cam_front;
-	screen.vertex[2] = cam_right;
-	com_pare pares[polygonCount];
-    for (int i = 0; i < polygonCount; ++i) {
-        pares[i].num = i;
-        pares[i].distance = -INFINITY;
-        for (int j = 0; j < pls[i].length; ++j) {
-            pares[i].distance = max(pares[i].distance,
-									distance(screen, pls[i].vertex[j]));
-        }
-        pares[i].distance = pares[i].distance > 0 ? pares[i].distance : INFINITY;
-    }
-    qsort(pares, polygonCount, sizeof(*pares), compar);
-    int offsets[polygonCount + 1];
-    offsets[0] = 0;
-    for (int i = 1; i <= polygonCount; ++i) {
-        offsets[i] = offsets[i - 1] + plgs[i - 1].axis1 * plgs[i - 1].axis2;
-    }
-    double for_t = distance(screen, cam_center);
-    for (int i = 0; i < polygonCount; ++i) {
-		if (pares[i].distance == INFINITY) continue;
-        patched_polygon loc_pol = plgs[pares[i].num];
-		for (int i1 = 0; i1 < loc_pol.axis1; ++i1) {
-			for (int j1 = 0; j1 < loc_pol.axis2; ++j1) {
-				int pt_ind = offsets[pares[i].num] + i1 * loc_pol.axis2 + j1;
-
-				//Add gamma-correction
-				glColor3f(pow(radio[pt_ind].deposit.x, 1.0 / 2),
-						  pow(radio[pt_ind].deposit.y, 1.0 / 2),
-						  pow(radio[pt_ind].deposit.z, 1.0 / 2));
-				glBegin(GL_POLYGON);
-				patch loc_pt = plgs[pares[i].num].patches[i1][j1];
-				for (int i2 = 0; i2 < loc_pt.length; ++i2) {
-					point aug = sub(loc_pt.vertex[i2], cam_center);
-					point res_p = sub(sum(cam_center,
-									mult(aug, -for_t / multS(aug,
-									screen.normal))), cam_front);
-                    double xcos = cosV(res_p, sub(cam_right, cam_front)) * length(res_p);
-                    double ycos = cosV(res_p, sub(cam_top, cam_front)) * length(res_p);
-                    glVertex3d(xcos / SCREEN_WIDTH * SCREEN_HEIGHT, ycos, 0);
-				}
-				glEnd();
-			}
-        }
-    }
-    SwapBuffers(hdc);*/
 }
 
 
@@ -728,35 +687,23 @@ int compar (const void* p1, const void* p2) {
 ///*****************************************************************************
 inline point sub(point p1, point p2) {
     point res = {p1.x - p2.x, p1.y - p2.y, p1.z - p2.z};
-    #ifdef OPTIMIZE_OUTPUT1
-    count[0]++;
-    #endif
     return res;
 }
 
 
 inline point mult(point p, double k) {
-	#ifdef OPTIMIZE_OUTPUT1
-	count[1]++;
-	#endif
     point res = {p.x * k, p.y * k, p.z * k};
     return res;
 }
 
 
 inline point sum(point p1, point p2) {
-	#ifdef OPTIMIZE_OUTPUT1
-	count[2]++;
-	#endif
     point res = {p1.x + p2.x, p1.y + p2.y, p1.z + p2.z};
     return res;
 }
 
 
 double square(polygon plg) {
-	#ifdef OPTIMIZE_OUTPUT1
-	count[3]++;
-	#endif
 	double res = 0;
 	for (int i = 2; i < plg.length; ++i) {
         res += length(multV(sub(plg.vertex[i], plg.vertex[0]),
@@ -767,9 +714,6 @@ double square(polygon plg) {
 
 
 point multV(point p1, point p2) {
-	#ifdef OPTIMIZE_OUTPUT1
-	count[4]++;
-	#endif
     point res = {p1.y * p2.z - p1.z * p2.y,
 				 p1.z * p2.x - p1.x * p2.z,
 				 p1.x * p2.y - p1.y * p2.x};
@@ -778,17 +722,11 @@ point multV(point p1, point p2) {
 
 
 inline double length(point p) {
-	#ifdef OPTIMIZE_OUTPUT1
-	count[5]++;
-	#endif // OPTIMIZE_OUTPUT1
 	return sqrt(p.x * p.x + p.y * p.y + p.z * p.z);
 }
 
 //Unused!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 point normal(polygon p) {
-	#ifdef OPTIMIZE_OUTPUT1
-	count[6]++;
-	#endif // OPTIMIZE_OUTPUT1
 	point res = multV(sub(p.vertex[1], p.vertex[0]),
 					sub(p.vertex[2], p.vertex[0]));
     return mult(res, 1.0 / length(res));
@@ -796,9 +734,6 @@ point normal(polygon p) {
 
 
 point center(patch p) {
-	#ifdef OPTIMIZE_OUTPUT1
-	count[7]++;
-	#endif // OPTIMIZE_OUTPUT1
     point c = {0, 0, 0};
     for (int i = 0; i < p.length; ++i) {
         c = sum(c, p.vertex[i]);
@@ -812,7 +747,6 @@ point randomPointInSquare(polygon p) {
     point p2 = sub(p.vertex[3], p.vertex[0]);
     double l1 = (double)rand() / RAND_MAX;
     double l2 = (double)rand() / RAND_MAX;
-    //return sum(p.vertex[0], mult(sub(p.vertex[2], p.vertex[0]), 0.5));
     return sum(p.vertex[0], sum(mult(p1, l1), mult(p2, l2)));
 }
 
@@ -822,9 +756,6 @@ point polarizePointInPolygon(polygon pl, point pnt) {
 }
 
 point randomPoint(patch p) {
-	#ifdef OPTIMIZE_OUTPUT1
-	count[8]++;
-	#endif // OPTIMIZE_OUTPUT1
     double * weightes = calloc(p.length, sizeof(*weightes));
     double s = 0;
     for (int i = 0; i < p.length; ++i) {
@@ -845,17 +776,11 @@ point randomPoint(patch p) {
 
 
 double multS(point p1, point p2) {
-	#ifdef OPTIMIZE_OUTPUT1
-	count[9]++;
-	#endif // OPTIMIZE_OUTPUT1
     return p1.x * p2.x + p1.y * p2.y + p1.z * p2.z;
 }
 
 
 double cosV(point p1, point p2) {
-	#ifdef OPTIMIZE_OUTPUT1
-	count[10]++;
-	#endif // OPTIMIZE_OUTPUT1
 	return multS(p1, p2) / length(p1) / length(p2);
 }
 
@@ -879,9 +804,6 @@ double distance(polygon pl, point p) {
 int checkIntersection(polygon pl, point p1, point p2) {
     point aug = sub(p2, p1);
     double d = -multS(pl.normal, pl.vertex[0]);
-    /*if (abs(d) < DBL_EPSILON) {
-        return inPolygon(pl, p1);
-    }*/
     double t =  -(d + multS(pl.normal, p1)) / multS(pl.normal, aug);
     if (t <= 0 || t > 1) {
         return 0;
