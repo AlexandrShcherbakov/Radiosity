@@ -6,10 +6,10 @@
 	<gl/glu.h>
 	"radiositylogic.h"
 
-1440054699 d:\dropbox\radiosity\radiosity\radiositylogic.h
+1440054899 d:\dropbox\radiosity\radiosity\radiositylogic.h
 	<windows.h>
 
-1440054599 source:d:\dropbox\radiosity\radiosity\radiositylogic.c
+1440056075 source:d:\dropbox\radiosity\radiosity\radiositylogic.c
 	"radiositylogic.h"
 	<stdio.h>
 	<stdlib.h>

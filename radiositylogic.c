@@ -24,12 +24,12 @@ int radiosityMain(HDC hdc) {
 	clock_t tm = clock();
 	#endif // OPTIMIZE_OUTPUT
 
-	polygonCount = 12;
+	polygonCount = 18;
     poly = hardcodedPolygons();
     pt_poly = calloc(polygonCount, sizeof(*pt_poly));
     ptindoffsets = calloc(polygonCount + 1, sizeof(*pt_poly));
     ptindoffsets[0] = 0;
-    int k = 7;
+    int k = 11;
 
     #ifdef OPTIMIZE_OUTPUT
     printf("Time for prepare scene: %d\n", clock() - tm);
@@ -52,8 +52,7 @@ int radiosityMain(HDC hdc) {
     for (int i = 0; i < patchCount; ++i) {
 		ff[i] = calloc(patchCount, sizeof(*radio));
     }
-	//printf("%lf %lf %lf\n", pt_poly[10].patches[10][10].vertex[0].x, pt_poly[10].patches[10][10].vertex[0].y, pt_poly[10].patches[10][10].vertex[0].z);
-	//exit(0);
+
 	#ifdef NYAN_CAT
 	plgs[0] = getPatchesFromQuadrangle(hard[0], 33);
 	#endif
@@ -94,10 +93,15 @@ int radiosityMain(HDC hdc) {
         radio[i].reflectance.y = 1;
         radio[i].reflectance.z = 0;
     }
-    for (int i = 6 * k * k; i < patchCount; ++i) {
+    for (int i = 6 * k * k; i < 12 * k * k; ++i) {
         radio[i].reflectance.x = 0.75;
         radio[i].reflectance.y = 0.75;
         radio[i].reflectance.z = 0;
+    }
+    for (int i = 12 * k * k; i < patchCount; ++i) {
+		radio[i].reflectance.x = 0;
+        radio[i].reflectance.y = 250.0 / 255;
+        radio[i].reflectance.z = 154.0 / 255;
     }
 
     #ifdef OPTIMIZE_OUTPUT
@@ -126,7 +130,7 @@ int radiosityMain(HDC hdc) {
 
 
 polygon * hardcodedPolygons() {
-	polygon * plgs = calloc(12, sizeof(*plgs));
+	polygon * plgs = calloc(18, sizeof(*plgs));
 
 	//Back wall
     plgs[0].vertex = calloc(POINTS_IN_QUADRANGLE, sizeof(point));
@@ -356,6 +360,126 @@ polygon * hardcodedPolygons() {
     plgs[11].vertex[3].x = 0.25;
     plgs[11].vertex[3].y = 0.25;
     plgs[11].vertex[3].z = -0.75;
+
+
+	//Left-back wall
+	plgs[12].vertex = calloc(POINTS_IN_QUADRANGLE, sizeof(point));
+	plgs[12].normal.x = -sqrt(2.0) / 2.0;
+	plgs[12].normal.y = -sqrt(2.0) / 2.0;
+	plgs[12].normal.z = 0;
+	plgs[12].length = POINTS_IN_QUADRANGLE;
+	plgs[12].vertex[0].x = -0.75;
+    plgs[12].vertex[0].y = -1;
+    plgs[12].vertex[0].z = -1;
+    plgs[12].vertex[1].x = -0.75;
+    plgs[12].vertex[1].y = -1;
+    plgs[12].vertex[1].z = -1 + sqrt(0.125);
+    plgs[12].vertex[2].x = -1;
+    plgs[12].vertex[2].y = -0.75;
+    plgs[12].vertex[2].z = -1 + sqrt(0.125);
+    plgs[12].vertex[3].x = -1;
+    plgs[12].vertex[3].y = -0.75;
+    plgs[12].vertex[3].z = -1;
+
+
+	//right-back wall
+	plgs[13].vertex = calloc(POINTS_IN_QUADRANGLE, sizeof(point));
+	plgs[13].normal.x = -sqrt(2.0) / 2.0;
+	plgs[13].normal.y = sqrt(2.0) / 2.0;
+	plgs[13].normal.z = 0;
+	plgs[13].length = POINTS_IN_QUADRANGLE;
+	plgs[13].vertex[0].x = -1;
+    plgs[13].vertex[0].y = -0.75;
+    plgs[13].vertex[0].z = -1;
+    plgs[13].vertex[1].x = -1;
+    plgs[13].vertex[1].y = -0.75;
+    plgs[13].vertex[1].z = -1 + sqrt(0.125);
+    plgs[13].vertex[2].x = -0.75;
+    plgs[13].vertex[2].y = -0.5;
+    plgs[13].vertex[2].z = -1 + sqrt(0.125);
+    plgs[13].vertex[3].x = -0.75;
+    plgs[13].vertex[3].y = -0.5;
+    plgs[13].vertex[3].z = -1;
+
+
+    //bottom wall
+	plgs[14].vertex = calloc(POINTS_IN_QUADRANGLE, sizeof(point));
+	plgs[14].normal.x = 0;
+	plgs[14].normal.y = 0;
+	plgs[14].normal.z = -1;
+	plgs[14].length = POINTS_IN_QUADRANGLE;
+	plgs[14].vertex[0].x = -0.75;
+    plgs[14].vertex[0].y = -1;
+    plgs[14].vertex[0].z = -1;
+    plgs[14].vertex[1].x = -1;
+    plgs[14].vertex[1].y = -0.75;
+    plgs[14].vertex[1].z = -1;
+    plgs[14].vertex[2].x = -0.75;
+    plgs[14].vertex[2].y = -0.5;
+    plgs[14].vertex[2].z = -1;
+    plgs[14].vertex[3].x = -0.5;
+    plgs[14].vertex[3].y = -0.75;
+    plgs[14].vertex[3].z = -1;
+
+
+	//left-front wall
+	plgs[15].vertex = calloc(POINTS_IN_QUADRANGLE, sizeof(point));
+	plgs[15].normal.x = sqrt(2.0) / 2;
+	plgs[15].normal.y = -sqrt(2.0) / 2;
+	plgs[15].normal.z = 0;
+	plgs[15].length = POINTS_IN_QUADRANGLE;
+	plgs[15].vertex[0].x = -0.75;
+    plgs[15].vertex[0].y = -1;
+    plgs[15].vertex[0].z = -1;
+    plgs[15].vertex[1].x = -0.75;
+    plgs[15].vertex[1].y = -1;
+    plgs[15].vertex[1].z = -1 + sqrt(0.125);
+    plgs[15].vertex[2].x = -0.5;
+    plgs[15].vertex[2].y = -0.75;
+    plgs[15].vertex[2].z = -1 + sqrt(0.125);
+    plgs[15].vertex[3].x = -0.5;
+    plgs[15].vertex[3].y = -0.75;
+    plgs[15].vertex[3].z = -1;
+
+
+    //right-front wall
+	plgs[16].vertex = calloc(POINTS_IN_QUADRANGLE, sizeof(point));
+	plgs[16].normal.x = sqrt(2.0) / 2;
+	plgs[16].normal.y = sqrt(2.0) / 2;
+	plgs[16].normal.z = 0;
+	plgs[16].length = POINTS_IN_QUADRANGLE;
+	plgs[16].vertex[0].x = -0.5;
+    plgs[16].vertex[0].y = -0.75;
+    plgs[16].vertex[0].z = -1;
+    plgs[16].vertex[1].x = -0.5;
+    plgs[16].vertex[1].y = -0.75;
+    plgs[16].vertex[1].z = -1 + sqrt(0.125);
+    plgs[16].vertex[2].x = -0.75;
+    plgs[16].vertex[2].y = -0.5;
+    plgs[16].vertex[2].z = -1 + sqrt(0.125);
+    plgs[16].vertex[3].x = -0.75;
+    plgs[16].vertex[3].y = -0.5;
+    plgs[16].vertex[3].z = -1;
+
+
+    //top wall
+	plgs[17].vertex = calloc(POINTS_IN_QUADRANGLE, sizeof(point));
+	plgs[17].normal.x = 0;
+	plgs[17].normal.y = 0;
+	plgs[17].normal.z = 1;
+	plgs[17].length = POINTS_IN_QUADRANGLE;
+	plgs[17].vertex[0].x = -0.75;
+    plgs[17].vertex[0].y = -1;
+    plgs[17].vertex[0].z = -1 + sqrt(0.125);
+    plgs[17].vertex[1].x = -1;
+    plgs[17].vertex[1].y = -0.75;
+    plgs[17].vertex[1].z = -1 + sqrt(0.125);
+    plgs[17].vertex[2].x = -0.75;
+    plgs[17].vertex[2].y = -0.5;
+    plgs[17].vertex[2].z = -1 + sqrt(0.125);
+    plgs[17].vertex[3].x = -0.5;
+    plgs[17].vertex[3].y = -0.75;
+    plgs[17].vertex[3].z = -1 + sqrt(0.125);
 
 	return plgs;
 }
