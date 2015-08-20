@@ -25,7 +25,7 @@ int radiosityMain() {
     pt_poly = calloc(polygonCount, sizeof(*pt_poly));
     ptindoffsets = calloc(polygonCount + 1, sizeof(*pt_poly));
     ptindoffsets[0] = 0;
-    int k = 4;
+    int k = 16;
 
     #ifdef OPTIMIZE_OUTPUT
     printf("Time for prepare scene: %d\n", clock() - tm);
@@ -110,9 +110,9 @@ int radiosityMain() {
     radio[k * k * 4 + k * (k - 1) / 2 - 1 + k].emmision.y = k * k / 4;
     radio[k * k * 4 + k * (k - 1) / 2 - 1 + k].emmision.z = k * k / 4;
     for (int i = 0; i < patchCount; ++i) {
-        radio[i].reflectance.x = 0.75;
-        radio[i].reflectance.y = 0.75;
-        radio[i].reflectance.z = 0.75;
+        radio[i].reflectance.x = 1;
+        radio[i].reflectance.y = 1;
+        radio[i].reflectance.z = 1;
     }
     for (int i = k * k; i < 2 * k * k; ++i) {
         radio[i].reflectance.x = 1;
@@ -563,16 +563,16 @@ int createPatchesFromQuadrangle(int polygonIndex, int ptCount) {
 
 
 int computeFormFactorForScene() {
-	glColor3f(0.0, 1.0, 1.0);
-	glPointSize(1.5);
-	glBegin(GL_POINTS);
+	//glColor3f(0.0, 1.0, 1.0);
+	//glPointSize(1.5);
+	//glBegin(GL_POINTS);
     for (int i = 0; i < polygonCount; ++i) {
         for (int j = i + 1; j < polygonCount; ++j) {
             computeFormFactorForPolygons(i, j);
             printf("%d %d\n", i, j);
         }
     }
-    glEnd();
+    //glEnd();
 }
 
 
@@ -600,11 +600,29 @@ double computeFormFactorForPatches(patch p1, patch p2, int pl1, int pl2) {
 	int cnt = 0;
     for (int i = 0; i < MONTE_KARLO_ITERATIONS_COUNT; ++i) {
 		double iter_res = 0;
-        point on_p1 = randomPoint(p1);
-        point on_p2 = randomPoint(p2);
-		if (pl1 != 5)
-			glVertex3d(on_p1.y, on_p1.z + 0.2, on_p1.x);
-		//glVertex3d(on_p2.y, on_p2.z + 0.2, on_p2.x);
+
+		//Hammersley Point Set
+		float u = 0;
+		int kk = i;
+
+		for (float p = 0.5; kk; p *= 0.5, kk >>= 1)
+			if (kk & 1)                           // kk mod 2 == 1
+				u += p;
+
+		float v = (i + 0.5) / MONTE_KARLO_ITERATIONS_COUNT;
+
+		//printf("%lf %lf\n", u, v);
+        point on_p1 = sum(p1.vertex[0], sum(mult(sub(p1.vertex[1], p1.vertex[0]), u), mult(sub(p1.vertex[3], p1.vertex[0]), v)));// = randomPoint(p1);
+		point on_p2 = sum(p2.vertex[0], sum(mult(sub(p2.vertex[1], p2.vertex[0]), u), mult(sub(p2.vertex[3], p2.vertex[0]), v)));
+        //point on_p2 = randomPoint(p2);
+		//if (pl1 != 5) glVertex3d(on_p1.y, on_p1.z + 0.2, on_p1.x);
+
+		point r = sub(on_p1, on_p2);
+		double lr = length(r);
+		if (fabs(lr) < DBL_EPSILON) {
+			cnt++;
+			continue;
+		}
 
 		//Visibility function
 		int flag = 0;
@@ -612,19 +630,17 @@ double computeFormFactorForPatches(patch p1, patch p2, int pl1, int pl2) {
 			if (j == pl1 || j == pl2) continue;
 			flag = checkIntersection(poly[j], on_p1, on_p2);
         }
-        cnt += flag;
 		if (flag)
 			continue;
 
-        point r = sub(on_p1, on_p2);
         iter_res = cosV(r, p2.normal);
         iter_res *= cosV(mult(r, -1), p1.normal);
         if (iter_res < 0) continue;
-        double lr = length(r);
 		iter_res /=  lr * lr;
+		if (iter_res > 10) continue;
 		result += iter_res;
     }
-    result /= MONTE_KARLO_ITERATIONS_COUNT;
+    result /= MONTE_KARLO_ITERATIONS_COUNT - cnt;
     result /= M_PI;
 	result *= square(p1) * square(p2);
     return result;
@@ -688,7 +704,7 @@ int drawScene(HDC hdc) {
 			}
         }
     }
-	computeFormFactorForScene();
+	//computeFormFactorForScene();
     SwapBuffers(hdc);
 }
 
@@ -828,7 +844,9 @@ double distance(polygon pl, point p) {
 int checkIntersection(polygon pl, point p1, point p2) {
     point aug = sub(p2, p1);
     double d = -multS(pl.normal, pl.vertex[0]);
-    double t =  -(d + multS(pl.normal, p1)) / multS(pl.normal, aug);
+    double t = multS(pl.normal, aug);
+    if (fabs(t) < DBL_EPSILON) return 0;
+    t =  -(d + multS(pl.normal, p1)) / t;
     if (t <= 0 || t > 1) {
         return 0;
     }

@@ -96,7 +96,6 @@ int WINAPI WinMain (HINSTANCE hThisInstance,
     glLoadIdentity();//load identity matrix
 
     radiosityMain();
-drawScene(hdc);
     /* Run the message loop. It will run until GetMessage() returns 0 */
     while (GetMessage (&messages, NULL, 0, 0))
     {
@@ -104,6 +103,7 @@ drawScene(hdc);
         TranslateMessage(&messages);
         /* Send message to WindowProcedure */
         DispatchMessage(&messages);
+        drawScene(hdc);
     }
     /* The program return-value is 0 - The value that PostQuitMessage() gave */
     return messages.wParam;
