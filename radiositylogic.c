@@ -14,6 +14,9 @@
 #include <time.h>
 #endif
 
+
+static int light_track[256];
+
 int radiosityMain() {
 
 	#ifdef OPTIMIZE_OUTPUT
@@ -97,7 +100,7 @@ int radiosityMain() {
     }
 	#endif // OPTIMIZE_OUTPUT
 
-    radio[k * k * 4 + k * (k - 1) / 2].emmision.x = k * k / 4;
+    /*radio[k * k * 4 + k * (k - 1) / 2].emmision.x = k * k / 4;
     radio[k * k * 4 + k * (k - 1) / 2].emmision.y = k * k / 4;
     radio[k * k * 4 + k * (k - 1) / 2].emmision.z = k * k / 4;
     radio[k * k * 4 + k * (k - 1) / 2 - 1].emmision.x = k * k / 4;
@@ -108,7 +111,7 @@ int radiosityMain() {
     radio[k * k * 4 + k * (k - 1) / 2 + k].emmision.z = k * k / 4;
     radio[k * k * 4 + k * (k - 1) / 2 - 1 + k].emmision.x = k * k / 4;
     radio[k * k * 4 + k * (k - 1) / 2 - 1 + k].emmision.y = k * k / 4;
-    radio[k * k * 4 + k * (k - 1) / 2 - 1 + k].emmision.z = k * k / 4;
+    radio[k * k * 4 + k * (k - 1) / 2 - 1 + k].emmision.z = k * k / 4;*/
     for (int i = 0; i < patchCount; ++i) {
         radio[i].reflectance.x = 1;
         radio[i].reflectance.y = 1;
@@ -139,7 +142,7 @@ int radiosityMain() {
 	tm = clock();
 	#endif // OPTIMIZE_OUTPUT
 
-    computeRadiosity(2);
+    //computeRadiosity(2);
 
     #ifdef OPTIMIZE_OUTPUT
     printf("Time for compute radiosity: %d\n", clock() - tm);
@@ -679,6 +682,21 @@ int computeRadiosity(int iterCount) {
 
 int drawScene(HDC hdc) {
 
+    static int light = 256 * 4;
+    radio[light].emmision.x = 0;
+    radio[light].emmision.y = 0;
+    radio[light].emmision.z = 0;
+    for (int i = 0; i < patchCount; ++i) {
+        radio[i].deposit.x = 0;
+        radio[i].deposit.y = 0;
+        radio[i].deposit.z = 0;
+    }
+    light = (light + 1) % 256 + 256 * 4;
+    radio[light].emmision.x = 256;
+    radio[light].emmision.y = 256;
+    radio[light].emmision.z = 256;
+	computeRadiosity(2);
+
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glLoadIdentity();//load identity matrix
 
@@ -704,8 +722,8 @@ int drawScene(HDC hdc) {
 			}
         }
     }
-	//computeFormFactorForScene();
     SwapBuffers(hdc);
+    return light - 256 * 4;
 }
 
 

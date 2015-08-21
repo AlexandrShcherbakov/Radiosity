@@ -1,5 +1,5 @@
 # depslib dependency file v1.0
-1440065967 source:d:\dropbox\radiosity\radiosity\main.cpp
+1440153955 source:d:\dropbox\radiosity\radiosity\main.cpp
 	<tchar.h>
 	<windows.h>
 	<gl/gl.h>
@@ -9,7 +9,7 @@
 1440068359 d:\dropbox\radiosity\radiosity\radiositylogic.h
 	<windows.h>
 
-1440077428 source:d:\dropbox\radiosity\radiosity\radiositylogic.c
+1440154235 source:d:\dropbox\radiosity\radiosity\radiositylogic.c
 	"radiositylogic.h"
 	<stdio.h>
 	<stdlib.h>

@@ -97,6 +97,8 @@ int WINAPI WinMain (HINSTANCE hThisInstance,
 
     radiosityMain();
     /* Run the message loop. It will run until GetMessage() returns 0 */
+    while(drawScene(hdc)) {
+    }
     while (GetMessage (&messages, NULL, 0, 0))
     {
         /* Translate virtual-key messages into character messages */
