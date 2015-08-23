@@ -8,34 +8,16 @@
 #include <gl/gl.h>
 #include <gl/glu.h>
 
-#define OPTIMIZE_OUTPUT
-
-#ifdef OPTIMIZE_OUTPUT
-#include <time.h>
-#endif
-
-
-static int light_track[256];
-
 int radiosityMain() {
-
-	#ifdef OPTIMIZE_OUTPUT
-	clock_t tm = clock();
-	#endif // OPTIMIZE_OUTPUT
-
+	//Initializetion of polygons
 	polygonCount = 18;
     poly = hardcodedPolygons();
     pt_poly = calloc(polygonCount, sizeof(*pt_poly));
     ptindoffsets = calloc(polygonCount + 1, sizeof(*pt_poly));
     ptindoffsets[0] = 0;
-    int k = 16;
+    int k = 8;
 
-    #ifdef OPTIMIZE_OUTPUT
-    printf("Time for prepare scene: %d\n", clock() - tm);
-	tm = clock();
-	#endif // OPTIMIZE_OUTPUT
-
-
+	//Creation of patches
 	for (int i = 0; i < 6; ++i) {
         createPatchesFromQuadrangle(i, k);
         if (i > 0) {
@@ -53,21 +35,14 @@ int radiosityMain() {
     patchCount = ptindoffsets[polygonCount] = ptindoffsets[polygonCount - 1] +
 			pt_poly[polygonCount - 1].axis1 * pt_poly[polygonCount - 1].axis2;
 
+	//Initialization of form-factors and radiosity
     radio = calloc(patchCount, sizeof(*radio));
     ff = calloc(patchCount, sizeof(*radio));
     for (int i = 0; i < patchCount; ++i) {
 		ff[i] = calloc(patchCount, sizeof(*radio));
     }
 
-	#ifdef NYAN_CAT
-	plgs[0] = getPatchesFromQuadrangle(hard[0], 33);
-	#endif
-
-	#ifdef OPTIMIZE_OUTPUT
-    printf("Time for create patches: %d\n", clock() - tm);
-	tm = clock();
-	#endif // OPTIMIZE_OUTPUT
-
+	//Read or compute form-factor
 	char ff_file[50];
     sprintf(ff_file, "ff\\%d", patchCount);
     FILE *formfactfile;
@@ -89,29 +64,7 @@ int radiosityMain() {
         }
     }
 
-    #ifdef OPTIMIZE_OUTPUT
-    printf("Time for compute form-factors: %d\n", clock() - tm);
-	tm = clock();
-	#endif // OPTIMIZE_OUTPUT
-
-	#ifdef OPTIMIZE_OUTPUT1
-    for (int i = 0; i < 11; ++i) {
-        printf("Count[%d]: %lld\n", i, count[i]);
-    }
-	#endif // OPTIMIZE_OUTPUT
-
-    /*radio[k * k * 4 + k * (k - 1) / 2].emmision.x = k * k / 4;
-    radio[k * k * 4 + k * (k - 1) / 2].emmision.y = k * k / 4;
-    radio[k * k * 4 + k * (k - 1) / 2].emmision.z = k * k / 4;
-    radio[k * k * 4 + k * (k - 1) / 2 - 1].emmision.x = k * k / 4;
-    radio[k * k * 4 + k * (k - 1) / 2 - 1].emmision.y = k * k / 4;
-    radio[k * k * 4 + k * (k - 1) / 2 - 1].emmision.z = k * k / 4;
-    radio[k * k * 4 + k * (k - 1) / 2 + k].emmision.x = k * k / 4;
-    radio[k * k * 4 + k * (k - 1) / 2 + k].emmision.y = k * k / 4;
-    radio[k * k * 4 + k * (k - 1) / 2 + k].emmision.z = k * k / 4;
-    radio[k * k * 4 + k * (k - 1) / 2 - 1 + k].emmision.x = k * k / 4;
-    radio[k * k * 4 + k * (k - 1) / 2 - 1 + k].emmision.y = k * k / 4;
-    radio[k * k * 4 + k * (k - 1) / 2 - 1 + k].emmision.z = k * k / 4;*/
+	//Initialization of colors
     for (int i = 0; i < patchCount; ++i) {
         radio[i].reflectance.x = 1;
         radio[i].reflectance.y = 1;
@@ -137,27 +90,6 @@ int radiosityMain() {
         radio[i].reflectance.y = 250.0 / 255;
         radio[i].reflectance.z = 154.0 / 255;
     }
-
-    #ifdef OPTIMIZE_OUTPUT
-	tm = clock();
-	#endif // OPTIMIZE_OUTPUT
-
-    //computeRadiosity(2);
-
-    #ifdef OPTIMIZE_OUTPUT
-    printf("Time for compute radiosity: %d\n", clock() - tm);
-	tm = clock();
-	#endif // OPTIMIZE_OUTPUT
-
-	#ifdef OPTIMIZE_OUTPUT
-	tm = clock();
-	#endif // OPTIMIZE_OUTPUT
-
-    #ifdef OPTIMIZE_OUTPUT
-    printf("Time for draw scene: %d\n", clock() - tm);
-	tm = clock();
-	#endif // OPTIMIZE_OUTPUT
-
 }
 
 
@@ -566,16 +498,12 @@ int createPatchesFromQuadrangle(int polygonIndex, int ptCount) {
 
 
 int computeFormFactorForScene() {
-	//glColor3f(0.0, 1.0, 1.0);
-	//glPointSize(1.5);
-	//glBegin(GL_POINTS);
     for (int i = 0; i < polygonCount; ++i) {
         for (int j = i + 1; j < polygonCount; ++j) {
             computeFormFactorForPolygons(i, j);
             printf("%d %d\n", i, j);
         }
     }
-    //glEnd();
 }
 
 
@@ -609,16 +537,13 @@ double computeFormFactorForPatches(patch p1, patch p2, int pl1, int pl2) {
 		int kk = i;
 
 		for (float p = 0.5; kk; p *= 0.5, kk >>= 1)
-			if (kk & 1)                           // kk mod 2 == 1
+			if (kk & 1)
 				u += p;
 
 		float v = (i + 0.5) / MONTE_KARLO_ITERATIONS_COUNT;
 
-		//printf("%lf %lf\n", u, v);
-        point on_p1 = sum(p1.vertex[0], sum(mult(sub(p1.vertex[1], p1.vertex[0]), u), mult(sub(p1.vertex[3], p1.vertex[0]), v)));// = randomPoint(p1);
+        point on_p1 = sum(p1.vertex[0], sum(mult(sub(p1.vertex[1], p1.vertex[0]), u), mult(sub(p1.vertex[3], p1.vertex[0]), v)));
 		point on_p2 = sum(p2.vertex[0], sum(mult(sub(p2.vertex[1], p2.vertex[0]), u), mult(sub(p2.vertex[3], p2.vertex[0]), v)));
-        //point on_p2 = randomPoint(p2);
-		//if (pl1 != 5) glVertex3d(on_p1.y, on_p1.z + 0.2, on_p1.x);
 
 		point r = sub(on_p1, on_p2);
 		double lr = length(r);
@@ -682,7 +607,7 @@ int computeRadiosity(int iterCount) {
 
 int drawScene(HDC hdc) {
 
-    static int light = 256 * 4;
+    static int light = 64 * 4;
     radio[light].emmision.x = 0;
     radio[light].emmision.y = 0;
     radio[light].emmision.z = 0;
@@ -691,10 +616,10 @@ int drawScene(HDC hdc) {
         radio[i].deposit.y = 0;
         radio[i].deposit.z = 0;
     }
-    light = (light + 1) % 256 + 256 * 4;
-    radio[light].emmision.x = 256;
-    radio[light].emmision.y = 256;
-    radio[light].emmision.z = 256;
+    light = (light + 1) % 64 + 64 * 4;
+    radio[light].emmision.x = 64;
+    radio[light].emmision.y = 64;
+    radio[light].emmision.z = 64;
 	computeRadiosity(2);
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -723,7 +648,7 @@ int drawScene(HDC hdc) {
         }
     }
     SwapBuffers(hdc);
-    return light - 256 * 4;
+    return light - 64 * 4;
 }
 
 

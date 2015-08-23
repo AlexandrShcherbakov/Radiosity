@@ -6,9 +6,12 @@
 
 #include <tchar.h>
 #include <windows.h>
+#include <stdio.h>
 #include <gl/gl.h>
 #include <gl/glu.h>
 #include "radiositylogic.h"
+
+#include "GL/wglext.h"
 
 
 /*  Declare Windows procedure  */
@@ -79,6 +82,9 @@ int WINAPI WinMain (HINSTANCE hThisInstance,
     pixelFormat = ChoosePixelFormat(hdc, &pfd);
     SetPixelFormat(hdc, pixelFormat, &pfd);
 
+
+	PFNWGLCREATECONTEXTATTRIBSARBPROC wglCreateContextAttribsARB = (PFNWGLCREATECONTEXTATTRIBSARBPROC)wglGetProcAddress("wglCreateContextAttribsARB");
+	printf("%p\n", wglGetProcAddress("wglCreateContextAttribsARB"));
 
     hglrc = wglCreateContext(hdc);
     wglMakeCurrent(hdc, hglrc);
