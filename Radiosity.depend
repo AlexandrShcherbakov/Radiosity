@@ -1,5 +1,5 @@
 # depslib dependency file v1.0
-1440248452 source:d:\dropbox\radiosity\radiosity\main.cpp
+1441305115 source:d:\dropbox\radiosity\radiosity\main.cpp
 	<tchar.h>
 	<windows.h>
 	<stdio.h>
@@ -7,11 +7,16 @@
 	<gl/glu.h>
 	"radiositylogic.h"
 	"GL/wglext.h"
+	"GL/glext.h"
 
-1440327503 d:\dropbox\radiosity\radiosity\radiositylogic.h
+1441290741 d:\dropbox\radiosity\radiosity\radiositylogic.h
 	<windows.h>
+	<gl/gl.h>
+	<gl/glu.h>
+	"GL/wglext.h"
+	"GL/glext.h"
 
-1440329025 source:d:\dropbox\radiosity\radiosity\radiositylogic.c
+1441305066 source:d:\dropbox\radiosity\radiosity\radiositylogic.c
 	"radiositylogic.h"
 	<stdio.h>
 	<stdlib.h>
@@ -20,7 +25,42 @@
 	<float.h>
 	<gl/gl.h>
 	<gl/glu.h>
+	"GL/wglext.h"
+	"GL/glext.h"
 
 1440178109 d:\dropbox\radiosity\radiosity\gl\wglext.h
 	<windows.h>
+
+902915672 d:\dropbox\radiosity\radiosity\\gl\glut.h
+	<windows.h>
+	<GL/gl.h>
+	<GL/glu.h>
+
+1440178119 d:\dropbox\radiosity\radiosity\gl\glext.h
+	<windows.h>
+	<stddef.h>
+	<inttypes.h>
+	<inttypes.h>
+	<inttypes.h>
+	<stdint.h>
+	<stdint.h>
+	<inttypes.h>
+
+1439232890 d:\dropbox\radiosity\radiosity\gl\glew.h
+	<stddef.h>
+	<inttypes.h>
+	<stdint.h>
+	<inttypes.h>
+	<Availability.h>
+	<OpenGL/glu.h>
+	<GL/glu.h>
+
+1439232890 d:\dropbox\radiosity\radiosity\\gl\glew.h
+	<stddef.h>
+	<inttypes.h>
+	<stdint.h>
+	<inttypes.h>
+	<Availability.h>
+	<OpenGL/glu.h>
+	<GL/glu.h>
 

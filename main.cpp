@@ -12,12 +12,12 @@
 #include "radiositylogic.h"
 
 #include "GL/wglext.h"
+#include "GL/glext.h"
 
 
-/*  Declare Windows procedure  */
 LRESULT CALLBACK WindowProcedure (HWND, UINT, WPARAM, LPARAM);
 
-/*  Make the class name into a global variable  */
+
 TCHAR szClassName[ ] = _T("CodeBlocksWindowsApp");
 
 int WINAPI WinMain (HINSTANCE hThisInstance,
@@ -25,52 +25,47 @@ int WINAPI WinMain (HINSTANCE hThisInstance,
                      LPSTR lpszArgument,
                      int nCmdShow)
 {
-    HWND hwnd;               /* This is the handle for our window */
-    MSG messages;            /* Here messages to the application are saved */
-    WNDCLASSEX wincl;        /* Data structure for the windowclass */
+    HWND hwnd;
+    MSG messages;
+    WNDCLASSEX wincl;
 
-    /* The Window structure */
     wincl.hInstance = hThisInstance;
     wincl.lpszClassName = szClassName;
-    wincl.lpfnWndProc = WindowProcedure;      /* This function is called by windows */
-    wincl.style = CS_DBLCLKS;                 /* Catch double-clicks */
+    wincl.lpfnWndProc = WindowProcedure;
+    wincl.style = CS_DBLCLKS;
     wincl.cbSize = sizeof (WNDCLASSEX);
 
-    /* Use default icon and mouse-pointer */
     wincl.hIcon = LoadIcon (NULL, IDI_APPLICATION);
     wincl.hIconSm = LoadIcon (NULL, IDI_APPLICATION);
     wincl.hCursor = LoadCursor (NULL, IDC_ARROW);
-    wincl.lpszMenuName = NULL;                 /* No menu */
-    wincl.cbClsExtra = 0;                      /* No extra bytes after the window class */
-    wincl.cbWndExtra = 0;                      /* structure or the window instance */
-    /* Use Windows's default colour as the background of the window */
+    wincl.lpszMenuName = NULL;
+    wincl.cbClsExtra = 0;
+    wincl.cbWndExtra = 0;
+
     wincl.hbrBackground = (HBRUSH) COLOR_BACKGROUND;
 
-    /* Register the window class, and if it fails quit the program */
     if (!RegisterClassEx (&wincl))
         return 0;
 
-    /* The class is registered, let's create the program*/
     hwnd = CreateWindowEx (
-           0,                   /* Extended possibilites for variation */
-           szClassName,         /* Classname */
-           _T("Code::Blocks Template Windows App"),       /* Title Text */
-           WS_OVERLAPPEDWINDOW, /* default window */
-           CW_USEDEFAULT,       /* Windows decides the position */
-           CW_USEDEFAULT,       /* where the window ends up on the screen */
-           SCREEN_WIDTH,                 /* The programs width */
-           SCREEN_HEIGHT,                 /* and height in pixels */
-           HWND_DESKTOP,        /* The window is a child-window to desktop */
-           NULL,                /* No menu */
-           hThisInstance,       /* Program Instance handler */
-           NULL                 /* No Window Creation data */
+           0,
+           szClassName,
+           _T("Code::Blocks Template Windows App"),
+           WS_OVERLAPPEDWINDOW,
+           CW_USEDEFAULT,
+           CW_USEDEFAULT,
+           SCREEN_WIDTH,
+           SCREEN_HEIGHT,
+           HWND_DESKTOP,
+           NULL,
+           hThisInstance,
+           NULL
            );
 
-    /* Make the window visible on the screen */
     ShowWindow (hwnd, nCmdShow);
 
 	HDC hdc = GetDC(hwnd);
-	HGLRC hglrc;
+	//HGLRC hglrc;
 	int pixelFormat;
     PIXELFORMATDESCRIPTOR pfd;
     pfd.nSize = sizeof(PIXELFORMATDESCRIPTOR);
@@ -82,15 +77,64 @@ int WINAPI WinMain (HINSTANCE hThisInstance,
     pixelFormat = ChoosePixelFormat(hdc, &pfd);
     SetPixelFormat(hdc, pixelFormat, &pfd);
 
+	HGLRC hRCTemp = wglCreateContext(hdc);
+	if (!hRCTemp || !wglMakeCurrent(hdc, hRCTemp))
+	{
+        printf("Сreating temp render context fail (%d)\n", GetLastError());
+        return false;
+	}
 
 	PFNWGLCREATECONTEXTATTRIBSARBPROC wglCreateContextAttribsARB = (PFNWGLCREATECONTEXTATTRIBSARBPROC)wglGetProcAddress("wglCreateContextAttribsARB");
-	printf("%p\n", wglGetProcAddress("wglCreateContextAttribsARB"));
+	wglMakeCurrent(NULL, NULL);
+	wglDeleteContext(hRCTemp);
 
-    hglrc = wglCreateContext(hdc);
-    wglMakeCurrent(hdc, hglrc);
+	if (!wglCreateContextAttribsARB)
+	{
+		printf("wglCreateContextAttribsARB fail (%d)\n", GetLastError());
+		return false;
+	}
+
+	int attribs[] =
+	{
+		WGL_CONTEXT_MAJOR_VERSION_ARB, 3,
+		WGL_CONTEXT_MINOR_VERSION_ARB, 3,
+		WGL_CONTEXT_FLAGS_ARB,         WGL_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB,
+		WGL_CONTEXT_PROFILE_MASK_ARB,  WGL_CONTEXT_CORE_PROFILE_BIT_ARB,
+		0
+	};
+
+	HGLRC hRC = wglCreateContextAttribsARB(hdc, 0, attribs);
+	if (!hRC || !wglMakeCurrent(hdc, hRC))
+	{
+        printf("Creating render context fail (%d)\n", GetLastError());
+        return false;
+	}
+
+	//hglrc = wglCreateContext(hdc);
+    //wglMakeCurrent(hdc, hglrc);
+	radiosityMain();
+	initShaders();
+	setCenters();
+	//setTriangle();
+	//setAttrib();
+	setUniforms();
+	// очистим буфер цвета и глубины
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	// делаем шейдерную программу активной
+	glUseProgram(shaderProgram);
+
+	// для рендеринга исопльзуем VAO
+	glBindVertexArray(meshVAO);
+
+	// рендер треугольника из VBO привязанного к VAO
+	glPointSize(2.0f);
+	glDrawArrays(GL_POINTS, 0, 4096);
+	SwapBuffers(hdc);
+	printf("OK\n");
 
 
-	glViewport(0,0,(GLsizei)SCREEN_WIDTH,(GLsizei)SCREEN_HEIGHT);
+	/*glViewport(0,0,(GLsizei)SCREEN_WIDTH,(GLsizei)SCREEN_HEIGHT);
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();//load identity matrix
 	gluPerspective(45.0f,(GLfloat)SCREEN_WIDTH/(GLfloat)SCREEN_HEIGHT,1.0f,1000.0f);
@@ -99,35 +143,29 @@ int WINAPI WinMain (HINSTANCE hThisInstance,
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glEnable(GL_DEPTH_TEST);
-    glLoadIdentity();//load identity matrix
+    glLoadIdentity();//load identity matrix*/
 
-    radiosityMain();
-    /* Run the message loop. It will run until GetMessage() returns 0 */
-    while(drawScene(hdc)) {
-    }
+    //radiosityMain();
     while (GetMessage (&messages, NULL, 0, 0))
     {
-        /* Translate virtual-key messages into character messages */
+
         TranslateMessage(&messages);
-        /* Send message to WindowProcedure */
+
         DispatchMessage(&messages);
-        drawScene(hdc);
     }
-    /* The program return-value is 0 - The value that PostQuitMessage() gave */
+
     return messages.wParam;
 }
 
 
-/*  This function is called by the Windows function DispatchMessage()  */
-
 LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
-    switch (message)                  /* handle the messages */
+    switch (message)
     {
         case WM_DESTROY:
-            PostQuitMessage (0);       /* send a WM_QUIT to the message queue */
+            PostQuitMessage (0);
             break;
-        default:                      /* for messages that we don't deal with */
+        default:
             return DefWindowProc (hwnd, message, wParam, lParam);
     }
 

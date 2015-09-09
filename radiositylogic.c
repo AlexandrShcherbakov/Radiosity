@@ -5,8 +5,15 @@
 #include <math.h>
 #include <windows.h>
 #include <float.h>
+
+//#include <GL/glew.h>
+
 #include <gl/gl.h>
 #include <gl/glu.h>
+
+#include "GL/wglext.h"
+#include "GL/glext.h"
+
 
 int radiosityMain() {
 	//Initializetion of polygons
@@ -15,7 +22,7 @@ int radiosityMain() {
     pt_poly = calloc(polygonCount, sizeof(*pt_poly));
     ptindoffsets = calloc(polygonCount + 1, sizeof(*pt_poly));
     ptindoffsets[0] = 0;
-    int k = 8;
+    int k = 16;
 
 	//Creation of patches
 	for (int i = 0; i < 6; ++i) {
@@ -46,20 +53,22 @@ int radiosityMain() {
 	char ff_file[50];
     sprintf(ff_file, "ff\\%d", patchCount);
     FILE *formfactfile;
-    if ((formfactfile = fopen(ff_file, "r")) == NULL) {
+    if ((formfactfile = fopen(ff_file, "rb")) == NULL) {
 		computeFormFactorForScene();
-        formfactfile = fopen(ff_file, "w");
+        formfactfile = fopen(ff_file, "wb");
         for (int i = 0; i < patchCount; ++i) {
             for (int j = 0; j < patchCount; ++j) {
-                fprintf(formfactfile, "%lf ", ff[i][j]);
+				fwrite(&ff[i][j], sizeof(ff[i][j]), 1, formfactfile);
+                //fprintf(formfactfile, "%lf ", ff[i][j]);
             }
-            fprintf(formfactfile, "\n");
+            //fprintf(formfactfile, "\n");
         }
     } else {
     	printf("Form-factor already computed\n");
 		for (int i = 0; i < patchCount; ++i) {
             for (int j = 0; j < patchCount; ++j) {
-                fscanf(formfactfile, "%lf ", &ff[i][j]);
+				fread(&ff[i][j], sizeof(ff[i][j]), 1, formfactfile);
+                //fscanf(formfactfile, "%lf ", &ff[i][j]);
             }
         }
     }
@@ -90,6 +99,7 @@ int radiosityMain() {
         radio[i].reflectance.y = 250.0 / 255;
         radio[i].reflectance.z = 154.0 / 255;
     }
+    return 1;
 }
 
 
@@ -494,6 +504,7 @@ int createPatchesFromQuadrangle(int polygonIndex, int ptCount) {
     }
     pt_poly[polygonIndex].patches = patches;
     pt_poly[polygonIndex].axis1 = pt_poly[polygonIndex].axis2 = ptCount;
+    return 1;
 }
 
 
@@ -504,6 +515,7 @@ int computeFormFactorForScene() {
             printf("%d %d\n", i, j);
         }
     }
+    return 1;
 }
 
 
@@ -523,6 +535,7 @@ int computeFormFactorForPolygons(int p1, int p2) {
             }
         }
     }
+    return 1;
 }
 
 
@@ -602,12 +615,14 @@ int computeRadiosity(int iterCount) {
 			radio[i].deposit = sum(radio[i].deposit, radio[i].excident);
 		}
 	}
+	return 1;
 }
 
 
 int drawScene(HDC hdc) {
 
-    static int light = 64 * 4;
+	const int magic_const = 256;
+    static int light = magic_const * 4;
     radio[light].emmision.x = 0;
     radio[light].emmision.y = 0;
     radio[light].emmision.z = 0;
@@ -616,10 +631,10 @@ int drawScene(HDC hdc) {
         radio[i].deposit.y = 0;
         radio[i].deposit.z = 0;
     }
-    light = (light + 1) % 64 + 64 * 4;
-    radio[light].emmision.x = 64;
-    radio[light].emmision.y = 64;
-    radio[light].emmision.z = 64;
+    light = (light + 1) % magic_const + magic_const * 4;
+    radio[light].emmision.x = magic_const;
+    radio[light].emmision.y = magic_const;
+    radio[light].emmision.z = magic_const;
 	computeRadiosity(2);
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -627,7 +642,6 @@ int drawScene(HDC hdc) {
 
     glTranslatef(0.0f,-0.4f,-3.8f);//move forward 4 units
 
-    int offset = 0;
     for (int i = 0; i < polygonCount; ++i) {
 		if (i == 5) continue;
 		for (int i1 = 0; i1 < pt_poly[i].axis1; ++i1) {
@@ -648,22 +662,339 @@ int drawScene(HDC hdc) {
         }
     }
     SwapBuffers(hdc);
-    return light - 64 * 4;
+    return light - magic_const * 4;
 }
 
 
-int compar (const void* p1, const void* p2) {
-    com_pare cp1 = *(com_pare *)p1;
-    com_pare cp2 = *(com_pare *)p2;
-    if (cp2.distance < cp1.distance) {
-		return -1;
-    } else if (cp2.distance > cp1.distance){
-    	return 1;
-    } else {
-    	return rand() % 3 - 1;
+// проверка статуса param шейдера shader
+GLint ShaderStatus(GLuint shader, GLenum param)
+{
+        GLint status, length;
+        GLchar buffer[1024];
+
+        // получим статус шейдера
+        glGetShaderiv(shader, param, &status);
+
+        // в случае ошибки запишем ее в лог-файл
+        if (status != GL_TRUE)
+        {
+                glGetShaderInfoLog(shader, 1024, &length, buffer);
+                printf("Shader: %s\n", (const char*)buffer);
+        }
+
+        // проверим не было ли ошибок OpenGL
+        OPENGL_CHECK_FOR_ERRORS();
+
+        // вернем статус
+        return status;
+}
+
+// проверка статуса param шейдерной программы program
+GLint ShaderProgramStatus(GLuint program, GLenum param)
+{
+        GLint status, length;
+        GLchar buffer[1024];
+
+        // получим статус шейдерной программы
+        glGetProgramiv(program, param, &status);
+
+        // в случае ошибки запишем ее в лог-файл
+        if (status != GL_TRUE)
+        {
+                glGetProgramInfoLog(program, 1024, &length, buffer);
+                printf("Shader program: %s\n", (const char*)buffer);
+        }
+
+        // проверим не было ли ошибок OpenGL
+        OPENGL_CHECK_FOR_ERRORS();
+
+        // вернем статус
+        return status;
+}
+
+int initShaders() {
+	OPENGL_GET_PROC(PFNGLCREATEPROGRAMPROC, glCreateProgram)
+	OPENGL_GET_PROC(PFNGLCREATESHADERPROC, glCreateShader)
+	OPENGL_GET_PROC(PFNGLSHADERSOURCEPROC, glShaderSource)
+	OPENGL_GET_PROC(PFNGLCOMPILESHADERPROC, glCompileShader)
+	OPENGL_GET_PROC(PFNGLATTACHSHADERPROC, glAttachShader)
+	OPENGL_GET_PROC(PFNGLLINKPROGRAMPROC, glLinkProgram)
+	OPENGL_GET_PROC(PFNGLUSEPROGRAMPROC, glUseProgram)
+	OPENGL_GET_PROC(PFNGLGENVERTEXARRAYSPROC, glGenVertexArrays)
+	OPENGL_GET_PROC(PFNGLBINDVERTEXARRAYPROC, glBindVertexArray)
+	OPENGL_GET_PROC(PFNGLGENBUFFERSPROC, glGenBuffers)
+	OPENGL_GET_PROC(PFNGLBINDBUFFERPROC, glBindBuffer)
+	OPENGL_GET_PROC(PFNGLBUFFERDATAPROC, glBufferData)
+	OPENGL_GET_PROC(PFNGLGETATTRIBLOCATIONPROC, glGetAttribLocation)
+	OPENGL_GET_PROC(PFNGLVERTEXATTRIBPOINTERPROC, glVertexAttribPointer)
+	OPENGL_GET_PROC(PFNGLENABLEVERTEXATTRIBARRAYPROC, glEnableVertexAttribArray)
+	OPENGL_GET_PROC(PFNGLGETUNIFORMLOCATIONPROC, glGetUniformLocation)
+	OPENGL_GET_PROC(PFNGLUNIFORMMATRIX4FVPROC, glUniformMatrix4fv)
+	OPENGL_GET_PROC(PFNGLGETSHADERIVPROC, glGetShaderiv)
+	OPENGL_GET_PROC(PFNGLGETPROGRAMIVPROC, glGetProgramiv)
+	OPENGL_GET_PROC(PFNGLGETSHADERINFOLOGPROC, glGetShaderInfoLog)
+	OPENGL_GET_PROC(PFNGLGETPROGRAMINFOLOGPROC, glGetProgramInfoLog)
+	OPENGL_GET_PROC(PFNGLVALIDATEPROGRAMPROC, glValidateProgram)
+
+	GLuint vertexShader, fragmentShader;
+
+	// переменные для хранения загруженных файлов
+	char *shaderSource;
+	int sourceLength;
+
+	// создадим шейдерную программу и шейдеры для нее
+	shaderProgram  = glCreateProgram();
+	vertexShader   = glCreateShader(GL_VERTEX_SHADER);
+	fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+
+
+	// загрузим вершинный шейдер
+	loadShader("shaders/vertex shader", &shaderSource, &sourceLength);
+
+	// зададим шейдеру исходный код и скомпилируем его
+	glShaderSource(vertexShader, 1, (const GLchar**)&shaderSource, (const GLint*)&sourceLength);
+	glCompileShader(vertexShader);
+
+	if (ShaderStatus(vertexShader, GL_COMPILE_STATUS) != GL_TRUE)
+        printf("Compile vertex shader error\n");
+
+	free(shaderSource);
+
+	// загрузим фрагментный шейдер
+	loadShader("shaders/fragment shader", &shaderSource, &sourceLength);
+
+	// зададим шейдеру исходный код и скомпилируем его
+	glShaderSource(fragmentShader, 1, (const GLchar**)&shaderSource, (const GLint*)&sourceLength);
+	glCompileShader(fragmentShader);
+
+	if (ShaderStatus(fragmentShader, GL_COMPILE_STATUS) != GL_TRUE)
+        printf("Compile frag shader error\n");
+
+	free(shaderSource);
+
+	// присоединим загруженные шейдеры к шейдерной программе
+	glAttachShader(shaderProgram, vertexShader);
+	glAttachShader(shaderProgram, fragmentShader);
+
+
+	// сборка шейдерной программы из прикрепленных шейдеров
+	glLinkProgram(shaderProgram);
+
+	if (ShaderProgramStatus(shaderProgram, GL_LINK_STATUS) != GL_TRUE)
+        printf("Link shaders error\n");
+
+	// сделаем шейдерную программу активной
+	glUseProgram(shaderProgram);
+
+	glValidateProgram(shaderProgram);
+	if (ShaderProgramStatus(shaderProgram, GL_VALIDATE_STATUS) != GL_TRUE)
+		printf("Link shaders error\n");
+	return 1;
+}
+
+
+int loadShader(char * shaderName, char **textOut, int *textLen) {
+	FILE *input;
+
+	input = fopen(shaderName, "r");
+
+	fseek(input, 0, SEEK_END);
+	*textLen = ftell(input);
+	rewind(input);
+
+	*textOut = calloc(sizeof(*textOut), *textLen + 1);
+
+	*textLen = fread(*textOut, sizeof(**textOut), *textLen, input);
+	close(input);
+	return 1;
+}
+
+int setCenters() {
+	GLuint meshVBO;
+	GLuint meshVBO2;
+	glGenVertexArrays(1, &meshVAO);
+	glBindVertexArray(meshVAO);
+
+    float * colors = calloc(patchCount * COLOR_COUNT, sizeof(*colors));
+    float * coords = calloc(patchCount * COORDS_COUNT, sizeof(*coords));
+
+	const int magic_const = 256;
+    static int light = magic_const * 4;
+    radio[light].emmision.x = 0;
+    radio[light].emmision.y = 0;
+    radio[light].emmision.z = 0;
+    for (int i = 0; i < patchCount; ++i) {
+        radio[i].deposit.x = 0;
+        radio[i].deposit.y = 0;
+        radio[i].deposit.z = 0;
     }
+    light = (light + 1) % magic_const + magic_const * 4;
+    radio[light].emmision.x = magic_const;
+    radio[light].emmision.y = magic_const;
+    radio[light].emmision.z = magic_const;
+	computeRadiosity(2);
+
+    int pt = 0;
+
+    for (int i = 0; i < polygonCount; ++i) {
+		if (i == 5) continue;
+		for (int i1 = 0; i1 < pt_poly[i].axis1; ++i1) {
+			for (int j1 = 0; j1 < pt_poly[i].axis2; ++j1) {
+				int pt_ind = ptindoffsets[i] + pt_poly[i].axis2 * i1 + j1;
+
+                colors[pt * COLOR_COUNT] = (float)pow(radio[pt_ind].deposit.x,
+														 1.0 / 2);
+				colors[pt * COLOR_COUNT + 1] = (float)pow(radio[pt_ind].deposit.y,
+														 1.0 / 2);
+				colors[pt * COLOR_COUNT + 2] = (float)pow(radio[pt_ind].deposit.z,
+														 1.0 / 2);
+				point ct = center(pt_poly[i].patches[i1][j1]);
+				coords[pt * COORDS_COUNT] = (float)ct.y;
+				coords[pt * COORDS_COUNT + 1] = (float)ct.z;
+				coords[pt * COORDS_COUNT + 2] = (float)ct.x - 3.0f;
+				pt++;
+			}
+        }
+    }
+
+    int vertexOffsetPosition = 0;
+	int vertexOffsetColor = 0;3 * sizeof(float) * pt;
+	GLint positionLocation, colorLocation;
+
+    glGenBuffers(1, &meshVBO);
+	glBindBuffer(GL_ARRAY_BUFFER, meshVBO);
+    glBufferData(GL_ARRAY_BUFFER, pt * sizeof(*coords) * COORDS_COUNT, coords, GL_STATIC_DRAW);
+
+
+	positionLocation = glGetAttribLocation(shaderProgram, "position");
+	if (positionLocation != -1)
+	{
+			glVertexAttribPointer(positionLocation, 3, GL_FLOAT, GL_FALSE,
+					sizeof(*coords) * COORDS_COUNT, (const GLvoid*)vertexOffsetPosition);
+			glEnableVertexAttribArray(positionLocation);
+	}
+
+	glGenBuffers(2, &meshVBO2);
+	glBindBuffer(GL_ARRAY_BUFFER, meshVBO2);
+    glBufferData(GL_ARRAY_BUFFER, pt * sizeof(*colors) * COLOR_COUNT, colors, GL_STATIC_DRAW);
+
+
+	colorLocation = glGetAttribLocation(shaderProgram, "color");
+	if (colorLocation != -1)
+	{
+			glVertexAttribPointer(colorLocation, 3, GL_FLOAT, GL_FALSE,
+					sizeof(*colors) * COLOR_COUNT, (const GLvoid*)vertexOffsetColor);
+			glEnableVertexAttribArray(colorLocation);
+	}
+
+    free(colors);
+    free(coords);
 }
 
+int setTriangle() {
+	// количество вершин в нашей геометрии, у нас простой треугольник
+const int vertexCount = 3;
+	// размер одной вершины меша в байтах - 6 float на позицию и на цвет вершины
+	const int vertexSize = 6 * sizeof(float);
+
+	// подготовим данные для вывода треугольника, всего 3 вершины по 6 float на каждую
+	static const float triangleMesh[3 * 6] = {
+			/* 1 вершина, позиция: */ -0.5f, -0.5f, -2.0f, /* цвет: */ 1.0f, 0.0f, 0.0f,
+			/* 2 вершина, позиция: */  0.0f,  0.5f, -2.0f, /* цвет: */ 0.0f, 1.0f, 0.0f,
+			/* 3 вершина, позиция: */  0.5f, -0.5f, -2.0f, /* цвет: */ 0.0f, 0.0f, 1.0f
+	};
+
+	// переменные для хранения индексов VAO и VBO
+	GLuint meshVBO;
+
+	// создадим Vertex Array Object (VAO)
+	glGenVertexArrays(1, &meshVAO);
+
+	// установим созданный VAO как текущий
+	glBindVertexArray(meshVAO);
+
+	// создадим Vertex Buffer Object (VBO)
+	glGenBuffers(1, &meshVBO);
+
+	// устанавливаем созданный VBO как текущий
+	glBindBuffer(GL_ARRAY_BUFFER, meshVBO);
+
+	// заполним VBO данными треугольника
+	glBufferData(GL_ARRAY_BUFFER, vertexCount * vertexSize, triangleMesh, GL_STATIC_DRAW);
+
+	return 1;
+}
+
+int setAttrib() {
+
+	const int vertexSize = 6 * sizeof(float);
+	// переменные для хранения индексов атрибутов
+	GLint positionLocation, colorLocation;
+
+	// смещения данных внутри вершинного буфера
+	const int vertexOffsetPosition = 0;
+	const int vertexOffsetColor    = 3 * sizeof(float);
+
+
+	// получим индекс атрибута 'position' из шейдера
+	positionLocation = glGetAttribLocation(shaderProgram, "position");
+	if (positionLocation != -1)
+	{
+			// укажем параметры доступа вершинного атрибута к VBO
+			glVertexAttribPointer(positionLocation, 3, GL_FLOAT, GL_FALSE,
+					vertexSize, (const GLvoid*)vertexOffsetPosition);
+			// разрешим использование атрибута
+			glEnableVertexAttribArray(positionLocation);
+	}
+
+	// получим индекс атрибута 'color' из шейдера
+	colorLocation = glGetAttribLocation(shaderProgram, "color");
+	if (colorLocation != -1)
+	{
+			// укажем параметры доступа вершинного атрибута к VBO
+			glVertexAttribPointer(colorLocation, 3, GL_FLOAT, GL_FALSE,
+					vertexSize, (const GLvoid*)vertexOffsetColor);
+			// разрешим использование атрибута
+			glEnableVertexAttribArray(colorLocation);
+	}
+	return 1;
+}
+
+void Matrix4Perspective(float *M, float fovy, float aspect, float znear, float zfar)
+{
+        // fovy передается в градусах - сконвертируем его в радианы
+        float f = 1 / tanf(fovy * M_PI / 360),
+              A = (zfar + znear) / (znear - zfar),
+              B = (2 * zfar * znear) / (znear - zfar);
+
+        M[ 0] = f / aspect; M[ 1] =  0; M[ 2] =  0; M[ 3] =  0;
+        M[ 4] = 0;          M[ 5] =  f; M[ 6] =  0; M[ 7] =  0;
+        M[ 8] = 0;          M[ 9] =  0; M[10] =  A; M[11] =  B;
+        M[12] = 0;          M[13] =  0; M[14] = -1; M[15] =  0;
+}
+
+int setUniforms() {
+	// массив для хранения перспективной матрици проекции
+	float projectionMatrix[16];
+
+	// переменная для хранения индекса юниформа
+	GLint projectionMatrixLocation;
+
+	// кожффициент отношения сторон окна OpenGL
+	const float aspectRatio = (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT;
+
+
+	// создадим перспективную матрицу проекции
+	Matrix4Perspective(projectionMatrix, 45.0f, aspectRatio, 0.0f, 5.0f);
+
+	// получим индекс юниформа projectionMatrix из шейдерной программы
+	projectionMatrixLocation = glGetUniformLocation(shaderProgram, "projectionMatrix");
+
+	// передадим матрицу в шейдер
+	if (projectionMatrixLocation != -1)
+		glUniformMatrix4fv(projectionMatrixLocation, 1, GL_TRUE, projectionMatrix);
+	return 1;
+}
 
 
 ///OPERATORS

@@ -2,10 +2,54 @@
 #define RADIOSITYLOGIC_H_INCLUDED
 
 #include <windows.h>
+#include <gl/gl.h>
+#include <gl/glu.h>
+#include "GL/wglext.h"
+#include "GL/glext.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+
+// расширения OpenGL
+// VAO
+PFNGLGENVERTEXARRAYSPROC    glGenVertexArrays;
+PFNGLDELETEVERTEXARRAYSPROC glDeleteVertexArrays;
+PFNGLBINDVERTEXARRAYPROC    glBindVertexArray;
+// VBO
+PFNGLGENBUFFERSPROC    glGenBuffers;
+PFNGLDELETEBUFFERSPROC glDeleteBuffers;
+PFNGLBINDBUFFERPROC    glBindBuffer;
+PFNGLBUFFERDATAPROC    glBufferData;
+PFNGLBUFFERSUBDATAPROC glBufferSubData;
+// Shaders
+PFNGLCREATEPROGRAMPROC     glCreateProgram;
+PFNGLDELETEPROGRAMPROC     glDeleteProgram;
+PFNGLLINKPROGRAMPROC       glLinkProgram;
+PFNGLVALIDATEPROGRAMPROC   glValidateProgram;
+PFNGLUSEPROGRAMPROC        glUseProgram;
+PFNGLGETPROGRAMIVPROC      glGetProgramiv;
+PFNGLGETPROGRAMINFOLOGPROC glGetProgramInfoLog;
+PFNGLCREATESHADERPROC      glCreateShader;
+PFNGLDELETESHADERPROC      glDeleteShader;
+PFNGLSHADERSOURCEPROC      glShaderSource;
+PFNGLCOMPILESHADERPROC     glCompileShader;
+PFNGLATTACHSHADERPROC      glAttachShader;
+PFNGLDETACHSHADERPROC      glDetachShader;
+PFNGLGETSHADERIVPROC       glGetShaderiv;
+PFNGLGETSHADERINFOLOGPROC  glGetShaderInfoLog;
+// Shaders attributes
+PFNGLGETATTRIBLOCATIONPROC        glGetAttribLocation;
+PFNGLVERTEXATTRIBPOINTERPROC      glVertexAttribPointer;
+PFNGLENABLEVERTEXATTRIBARRAYPROC  glEnableVertexAttribArray;
+PFNGLDISABLEVERTEXATTRIBARRAYPROC glDisableVertexAttribArray;
+// Shaders uniforms
+PFNGLGETUNIFORMLOCATIONPROC glGetUniformLocation;
+PFNGLUNIFORMMATRIX4FVPROC   glUniformMatrix4fv;
+
+
+
 
 ///
 ///TYPES
@@ -83,7 +127,23 @@ extern "C" {
 ///Draws scene on screen
 	int drawScene(HDC hdc);
 
+///Initialize shaders
+	int initShaders();
 
+///Load shader
+	int loadShader(char * shaderName, char **textOut, int *textLen);
+
+///Set triangle
+	int setTriangle();
+
+///Set shader`s attributes
+	int setAttrib();
+
+///Set shader`s uniforms
+	int setUniforms();
+
+///Set centers of patches to shader
+	int setCenters();
 
 ///*******************************************
 ///
@@ -151,7 +211,9 @@ enum {
     MONTE_KARLO_ITERATIONS_COUNT=200,
     SCREEN_WIDTH=600,
     SCREEN_HEIGHT=600,
-    SCALE_CONST=300
+    SCALE_CONST=300,
+    COORDS_COUNT=3,
+    COLOR_COUNT=3
 };
 
 
@@ -181,8 +243,28 @@ static int patchCount;
 ///Array of offsets for index of patch
 static int *ptindoffsets;
 
+///Shaders
+GLuint shaderProgram;
+
+///
+GLuint meshVAO;
+
 #ifdef __cplusplus
 }
 #endif
+
+#define OPENGL_GET_PROC(p,n) \
+		n = (p)wglGetProcAddress(#n); \
+        if (NULL == n) \
+        { \
+                printf("Loading extension '%s' fail (%d)\n", #n, GetLastError()); \
+                return 0; \
+        }
+
+GLenum g_OpenGLError;
+
+#define OPENGL_CHECK_FOR_ERRORS() \
+        if ((g_OpenGLError = glGetError()) != GL_NO_ERROR) \
+                printf("OpenGL error 0x%X\n", (unsigned)g_OpenGLError);
 
 #endif // RADIOSITYLOGIC_H_INCLUDED

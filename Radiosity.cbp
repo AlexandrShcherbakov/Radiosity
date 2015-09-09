@@ -45,6 +45,8 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="radiositylogic.h" />
+		<Unit filename="shaders/fragment shader" />
+		<Unit filename="shaders/vertex shader" />
 		<Extensions>
 			<code_completion />
 			<envvars />
