@@ -712,7 +712,9 @@ GLint ShaderProgramStatus(GLuint program, GLenum param)
         return status;
 }
 
-int initShaders() {
+
+int useShaders(HDC hdc) {
+	//Init functions
 	OPENGL_GET_PROC(PFNGLCREATEPROGRAMPROC, glCreateProgram)
 	OPENGL_GET_PROC(PFNGLCREATESHADERPROC, glCreateShader)
 	OPENGL_GET_PROC(PFNGLSHADERSOURCEPROC, glShaderSource)
@@ -737,6 +739,8 @@ int initShaders() {
 	OPENGL_GET_PROC(PFNGLVALIDATEPROGRAMPROC, glValidateProgram)
 
 	GLuint vertexShader, fragmentShader;
+	GLuint shaderProgram;
+	GLuint meshVAO;
 
 	// переменные для хранения загруженных файлов
 	char *shaderSource;
@@ -747,16 +751,12 @@ int initShaders() {
 	vertexShader   = glCreateShader(GL_VERTEX_SHADER);
 	fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
 
-
 	// загрузим вершинный шейдер
 	loadShader("shaders/vertex shader", &shaderSource, &sourceLength);
 
 	// зададим шейдеру исходный код и скомпилируем его
 	glShaderSource(vertexShader, 1, (const GLchar**)&shaderSource, (const GLint*)&sourceLength);
 	glCompileShader(vertexShader);
-
-	if (ShaderStatus(vertexShader, GL_COMPILE_STATUS) != GL_TRUE)
-        printf("Compile vertex shader error\n");
 
 	free(shaderSource);
 
@@ -766,9 +766,6 @@ int initShaders() {
 	// зададим шейдеру исходный код и скомпилируем его
 	glShaderSource(fragmentShader, 1, (const GLchar**)&shaderSource, (const GLint*)&sourceLength);
 	glCompileShader(fragmentShader);
-
-	if (ShaderStatus(fragmentShader, GL_COMPILE_STATUS) != GL_TRUE)
-        printf("Compile frag shader error\n");
 
 	free(shaderSource);
 
@@ -780,58 +777,42 @@ int initShaders() {
 	// сборка шейдерной программы из прикрепленных шейдеров
 	glLinkProgram(shaderProgram);
 
-	if (ShaderProgramStatus(shaderProgram, GL_LINK_STATUS) != GL_TRUE)
-        printf("Link shaders error\n");
-
 	// сделаем шейдерную программу активной
 	glUseProgram(shaderProgram);
 
-	glValidateProgram(shaderProgram);
-	if (ShaderProgramStatus(shaderProgram, GL_VALIDATE_STATUS) != GL_TRUE)
-		printf("Link shaders error\n");
-	return 1;
-}
 
 
-int loadShader(char * shaderName, char **textOut, int *textLen) {
-	FILE *input;
-
-	input = fopen(shaderName, "r");
-
-	fseek(input, 0, SEEK_END);
-	*textLen = ftell(input);
-	rewind(input);
-
-	*textOut = calloc(sizeof(*textOut), *textLen + 1);
-
-	*textLen = fread(*textOut, sizeof(**textOut), *textLen, input);
-	close(input);
-	return 1;
-}
-
-int setCenters() {
+	//Set geometry
 	GLuint meshVBO;
 	GLuint meshVBO2;
 	glGenVertexArrays(1, &meshVAO);
 	glBindVertexArray(meshVAO);
 
-    float * colors = calloc(patchCount * COLOR_COUNT, sizeof(*colors));
-    float * coords = calloc(patchCount * COORDS_COUNT, sizeof(*coords));
+    float * colors = calloc(6 * patchCount * COLOR_COUNT, sizeof(*colors));
+    float * coords = calloc(6 * patchCount * COORDS_COUNT, sizeof(*coords));
 
-	const int magic_const = 256;
-    static int light = magic_const * 4;
-    radio[light].emmision.x = 0;
-    radio[light].emmision.y = 0;
-    radio[light].emmision.z = 0;
+	const int magic_const = 16;
     for (int i = 0; i < patchCount; ++i) {
         radio[i].deposit.x = 0;
         radio[i].deposit.y = 0;
         radio[i].deposit.z = 0;
     }
-    light = (light + 1) % magic_const + magic_const * 4;
-    radio[light].emmision.x = magic_const;
-    radio[light].emmision.y = magic_const;
-    radio[light].emmision.z = magic_const;
+	int light = magic_const * magic_const * 4 + magic_const * magic_const / 2 + magic_const / 2;
+    radio[light].emmision.x = magic_const * magic_const / 4;
+	radio[light].emmision.y = magic_const * magic_const / 4;
+	radio[light].emmision.z = magic_const * magic_const / 4;
+    light--;
+    radio[light].emmision.x = magic_const * magic_const / 4;
+	radio[light].emmision.y = magic_const * magic_const / 4;
+	radio[light].emmision.z = magic_const * magic_const / 4;
+	light -= magic_const;
+	radio[light].emmision.x = magic_const * magic_const / 4;
+	radio[light].emmision.y = magic_const * magic_const / 4;
+	radio[light].emmision.z = magic_const * magic_const / 4;
+	light++;
+	radio[light].emmision.x = magic_const * magic_const / 4;
+	radio[light].emmision.y = magic_const * magic_const / 4;
+	radio[light].emmision.z = magic_const * magic_const / 4;
 	computeRadiosity(2);
 
     int pt = 0;
@@ -841,24 +822,37 @@ int setCenters() {
 		for (int i1 = 0; i1 < pt_poly[i].axis1; ++i1) {
 			for (int j1 = 0; j1 < pt_poly[i].axis2; ++j1) {
 				int pt_ind = ptindoffsets[i] + pt_poly[i].axis2 * i1 + j1;
-
-                colors[pt * COLOR_COUNT] = (float)pow(radio[pt_ind].deposit.x,
-														 1.0 / 2);
-				colors[pt * COLOR_COUNT + 1] = (float)pow(radio[pt_ind].deposit.y,
-														 1.0 / 2);
-				colors[pt * COLOR_COUNT + 2] = (float)pow(radio[pt_ind].deposit.z,
-														 1.0 / 2);
-				point ct = center(pt_poly[i].patches[i1][j1]);
-				coords[pt * COORDS_COUNT] = (float)ct.y;
-				coords[pt * COORDS_COUNT + 1] = (float)ct.z;
-				coords[pt * COORDS_COUNT + 2] = (float)ct.x - 3.0f;
-				pt++;
+				point * ct = pt_poly[i].patches[i1][j1].vertex;
+				for (int it = 0; it < 3; ++it) {
+					colors[pt * COLOR_COUNT] = (float)pow(radio[pt_ind].deposit.x,
+															 1.0 / 2);
+					colors[pt * COLOR_COUNT + 1] = (float)pow(radio[pt_ind].deposit.y,
+															 1.0 / 2);
+					colors[pt * COLOR_COUNT + 2] = (float)pow(radio[pt_ind].deposit.z,
+															 1.0 / 2);
+					coords[pt * COORDS_COUNT] = (float)ct[it].y;
+					coords[pt * COORDS_COUNT + 1] = (float)ct[it].z;
+					coords[pt * COORDS_COUNT + 2] = (float)ct[it].x - 3.0f;
+					pt++;
+				}
+				for (int it = 2; it < 5; ++it) {
+					colors[pt * COLOR_COUNT] = (float)pow(radio[pt_ind].deposit.x,
+															 1.0 / 2);
+					colors[pt * COLOR_COUNT + 1] = (float)pow(radio[pt_ind].deposit.y,
+															 1.0 / 2);
+					colors[pt * COLOR_COUNT + 2] = (float)pow(radio[pt_ind].deposit.z,
+															 1.0 / 2);
+					coords[pt * COORDS_COUNT] = (float)ct[it % 4].y;
+					coords[pt * COORDS_COUNT + 1] = (float)ct[it % 4].z;
+					coords[pt * COORDS_COUNT + 2] = (float)ct[it % 4].x - 3.0f;
+					pt++;
+				}
 			}
         }
     }
 
     int vertexOffsetPosition = 0;
-	int vertexOffsetColor = 0;3 * sizeof(float) * pt;
+	int vertexOffsetColor = 0;
 	GLint positionLocation, colorLocation;
 
     glGenBuffers(1, &meshVBO);
@@ -889,91 +883,10 @@ int setCenters() {
 
     free(colors);
     free(coords);
-}
-
-int setTriangle() {
-	// количество вершин в нашей геометрии, у нас простой треугольник
-const int vertexCount = 3;
-	// размер одной вершины меша в байтах - 6 float на позицию и на цвет вершины
-	const int vertexSize = 6 * sizeof(float);
-
-	// подготовим данные для вывода треугольника, всего 3 вершины по 6 float на каждую
-	static const float triangleMesh[3 * 6] = {
-			/* 1 вершина, позиция: */ -0.5f, -0.5f, -2.0f, /* цвет: */ 1.0f, 0.0f, 0.0f,
-			/* 2 вершина, позиция: */  0.0f,  0.5f, -2.0f, /* цвет: */ 0.0f, 1.0f, 0.0f,
-			/* 3 вершина, позиция: */  0.5f, -0.5f, -2.0f, /* цвет: */ 0.0f, 0.0f, 1.0f
-	};
-
-	// переменные для хранения индексов VAO и VBO
-	GLuint meshVBO;
-
-	// создадим Vertex Array Object (VAO)
-	glGenVertexArrays(1, &meshVAO);
-
-	// установим созданный VAO как текущий
-	glBindVertexArray(meshVAO);
-
-	// создадим Vertex Buffer Object (VBO)
-	glGenBuffers(1, &meshVBO);
-
-	// устанавливаем созданный VBO как текущий
-	glBindBuffer(GL_ARRAY_BUFFER, meshVBO);
-
-	// заполним VBO данными треугольника
-	glBufferData(GL_ARRAY_BUFFER, vertexCount * vertexSize, triangleMesh, GL_STATIC_DRAW);
-
-	return 1;
-}
-
-int setAttrib() {
-
-	const int vertexSize = 6 * sizeof(float);
-	// переменные для хранения индексов атрибутов
-	GLint positionLocation, colorLocation;
-
-	// смещения данных внутри вершинного буфера
-	const int vertexOffsetPosition = 0;
-	const int vertexOffsetColor    = 3 * sizeof(float);
 
 
-	// получим индекс атрибута 'position' из шейдера
-	positionLocation = glGetAttribLocation(shaderProgram, "position");
-	if (positionLocation != -1)
-	{
-			// укажем параметры доступа вершинного атрибута к VBO
-			glVertexAttribPointer(positionLocation, 3, GL_FLOAT, GL_FALSE,
-					vertexSize, (const GLvoid*)vertexOffsetPosition);
-			// разрешим использование атрибута
-			glEnableVertexAttribArray(positionLocation);
-	}
 
-	// получим индекс атрибута 'color' из шейдера
-	colorLocation = glGetAttribLocation(shaderProgram, "color");
-	if (colorLocation != -1)
-	{
-			// укажем параметры доступа вершинного атрибута к VBO
-			glVertexAttribPointer(colorLocation, 3, GL_FLOAT, GL_FALSE,
-					vertexSize, (const GLvoid*)vertexOffsetColor);
-			// разрешим использование атрибута
-			glEnableVertexAttribArray(colorLocation);
-	}
-	return 1;
-}
-
-void Matrix4Perspective(float *M, float fovy, float aspect, float znear, float zfar)
-{
-        // fovy передается в градусах - сконвертируем его в радианы
-        float f = 1 / tanf(fovy * M_PI / 360),
-              A = (zfar + znear) / (znear - zfar),
-              B = (2 * zfar * znear) / (znear - zfar);
-
-        M[ 0] = f / aspect; M[ 1] =  0; M[ 2] =  0; M[ 3] =  0;
-        M[ 4] = 0;          M[ 5] =  f; M[ 6] =  0; M[ 7] =  0;
-        M[ 8] = 0;          M[ 9] =  0; M[10] =  A; M[11] =  B;
-        M[12] = 0;          M[13] =  0; M[14] = -1; M[15] =  0;
-}
-
-int setUniforms() {
+	//Set uniforms
 	// массив для хранения перспективной матрици проекции
 	float projectionMatrix[16];
 
@@ -993,7 +906,50 @@ int setUniforms() {
 	// передадим матрицу в шейдер
 	if (projectionMatrixLocation != -1)
 		glUniformMatrix4fv(projectionMatrixLocation, 1, GL_TRUE, projectionMatrix);
+
+
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	// делаем шейдерную программу активной
+	glUseProgram(shaderProgram);
+
+	// для рендеринга исопльзуем VAO
+	glBindVertexArray(meshVAO);
+
+	// рендер треугольника из VBO привязанного к VAO
+	glPointSize(2.0f);
+	glDrawArrays(GL_TRIANGLES, 0, pt);
+	SwapBuffers(hdc);
+}
+
+
+int loadShader(char * shaderName, char **textOut, int *textLen) {
+	FILE *input;
+
+	input = fopen(shaderName, "r");
+
+	fseek(input, 0, SEEK_END);
+	*textLen = ftell(input);
+	rewind(input);
+
+	*textOut = calloc(sizeof(*textOut), *textLen + 1);
+
+	*textLen = fread(*textOut, sizeof(**textOut), *textLen, input);
+	close(input);
 	return 1;
+}
+
+void Matrix4Perspective(float *M, float fovy, float aspect, float znear, float zfar)
+{
+        // fovy передается в градусах - сконвертируем его в радианы
+        float f = 1 / tanf(fovy * M_PI / 360),
+              A = (zfar + znear) / (znear - zfar),
+              B = (2 * zfar * znear) / (znear - zfar);
+
+        M[ 0] = f / aspect; M[ 1] =  0; M[ 2] =  0; M[ 3] =  0;
+        M[ 4] = 0;          M[ 5] =  f; M[ 6] =  0; M[ 7] =  0;
+        M[ 8] = 0;          M[ 9] =  0; M[10] =  A; M[11] =  B;
+        M[12] = 0;          M[13] =  0; M[14] = -1; M[15] =  0;
 }
 
 

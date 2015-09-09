@@ -145,6 +145,9 @@ PFNGLUNIFORMMATRIX4FVPROC   glUniformMatrix4fv;
 ///Set centers of patches to shader
 	int setCenters();
 
+///Initialize and use shaders
+	int useShaders(HDC hdc);
+
 ///*******************************************
 ///
 ///OPERATORS FOR TYPES

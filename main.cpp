@@ -110,42 +110,9 @@ int WINAPI WinMain (HINSTANCE hThisInstance,
         return false;
 	}
 
-	//hglrc = wglCreateContext(hdc);
-    //wglMakeCurrent(hdc, hglrc);
 	radiosityMain();
-	initShaders();
-	setCenters();
-	//setTriangle();
-	//setAttrib();
-	setUniforms();
-	// очистим буфер цвета и глубины
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    useShaders(hdc);
 
-	// делаем шейдерную программу активной
-	glUseProgram(shaderProgram);
-
-	// для рендеринга исопльзуем VAO
-	glBindVertexArray(meshVAO);
-
-	// рендер треугольника из VBO привязанного к VAO
-	glPointSize(2.0f);
-	glDrawArrays(GL_POINTS, 0, 4096);
-	SwapBuffers(hdc);
-	printf("OK\n");
-
-
-	/*glViewport(0,0,(GLsizei)SCREEN_WIDTH,(GLsizei)SCREEN_HEIGHT);
-	glMatrixMode(GL_PROJECTION);
-	glLoadIdentity();//load identity matrix
-	gluPerspective(45.0f,(GLfloat)SCREEN_WIDTH/(GLfloat)SCREEN_HEIGHT,1.0f,1000.0f);
-	glMatrixMode(GL_MODELVIEW);
-	glLoadIdentity();//load identity matrix
-
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	glEnable(GL_DEPTH_TEST);
-    glLoadIdentity();//load identity matrix*/
-
-    //radiosityMain();
     while (GetMessage (&messages, NULL, 0, 0))
     {
 

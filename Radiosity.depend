@@ -1,5 +1,5 @@
 # depslib dependency file v1.0
-1441305115 source:d:\dropbox\radiosity\radiosity\main.cpp
+1441786133 source:d:\dropbox\radiosity\radiosity\main.cpp
 	<tchar.h>
 	<windows.h>
 	<stdio.h>
@@ -9,14 +9,14 @@
 	"GL/wglext.h"
 	"GL/glext.h"
 
-1441290741 d:\dropbox\radiosity\radiosity\radiositylogic.h
+1441786101 d:\dropbox\radiosity\radiosity\radiositylogic.h
 	<windows.h>
 	<gl/gl.h>
 	<gl/glu.h>
 	"GL/wglext.h"
 	"GL/glext.h"
 
-1441305066 source:d:\dropbox\radiosity\radiosity\radiositylogic.c
+1441785561 source:d:\dropbox\radiosity\radiosity\radiositylogic.c
 	"radiositylogic.h"
 	<stdio.h>
 	<stdlib.h>
