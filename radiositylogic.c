@@ -6,7 +6,7 @@
 #include <windows.h>
 #include <float.h>
 
-//#include <GL/glew.h>
+#include <time.h>
 
 #include <gl/gl.h>
 #include <gl/glu.h>
@@ -22,7 +22,7 @@ int radiosityMain() {
     pt_poly = calloc(polygonCount, sizeof(*pt_poly));
     ptindoffsets = calloc(polygonCount + 1, sizeof(*pt_poly));
     ptindoffsets[0] = 0;
-    int k = 4;
+    int k = 16;
 
 	//Creation of patches
 	for (int i = 0; i < 6; ++i) {
@@ -53,7 +53,7 @@ int radiosityMain() {
 	char ff_file[50];
     sprintf(ff_file, "ff\\%d", patchCount);
     FILE *formfactfile;
-    if ((formfactfile = fopen(ff_file, "rb")) == NULL || 1) {
+    if ((formfactfile = fopen(ff_file, "rb")) == NULL) {
 		computeFormFactorForScene();
         formfactfile = fopen(ff_file, "wb");
         for (int i = 0; i < patchCount; ++i) {
@@ -543,46 +543,53 @@ int computeFormFactorForPolygons(int p1, int p2) {
 float computeFormFactorForPatches(patch p1, patch p2, int pl1, int pl2) {
 	float result = 0;
 	int cnt = 0;
+	float xx[MONTE_KARLO_ITERATIONS_COUNT];
+	float yy[MONTE_KARLO_ITERATIONS_COUNT];
+	for (int i = 0; i < MONTE_KARLO_ITERATIONS_COUNT; ++i) {
+        //Hammersley Point Set
+        float u = 0;
+        int kk = i;
+
+        for (float p = 0.5; kk; p *= 0.5, kk >>= 1)
+            if (kk & 1)
+                u += p;
+
+        float v = (i + 0.5) / MONTE_KARLO_ITERATIONS_COUNT;
+        xx[i] = u;
+        yy[i] = v;
+	}
     for (int i = 0; i < MONTE_KARLO_ITERATIONS_COUNT; ++i) {
-		float iter_res = 0;
+        for (int j = 0; j < MONTE_KARLO_ITERATIONS_COUNT; ++j) {
+            float iter_res = 0;
 
-		//Hammersley Point Set
-		float u = 0;
-		int kk = i;
+            point on_p1 = sum(p1.vertex[0], sum(mult(sub(p1.vertex[1], p1.vertex[0]), xx[i]), mult(sub(p1.vertex[3], p1.vertex[0]), yy[i])));
+            point on_p2 = sum(p2.vertex[0], sum(mult(sub(p2.vertex[1], p2.vertex[0]), xx[j]), mult(sub(p2.vertex[3], p2.vertex[0]), yy[j])));
 
-		for (float p = 0.5; kk; p *= 0.5, kk >>= 1)
-			if (kk & 1)
-				u += p;
+            point r = sub(on_p1, on_p2);
+            float lr = length(r);
+            if (fabs(lr) < DBL_EPSILON) {
+                cnt++;
+                continue;
+            }
 
-		float v = (i + 0.5) / MONTE_KARLO_ITERATIONS_COUNT;
+            //Visibility function
+            int flag = 0;
+            for (int j = 0; j < polygonCount && !flag; ++j) {
+                if (j == pl1 || j == pl2) continue;
+                flag = checkIntersection(poly[j], on_p1, on_p2);
+            }
+            if (flag)
+                continue;
 
-        point on_p1 = sum(p1.vertex[0], sum(mult(sub(p1.vertex[1], p1.vertex[0]), u), mult(sub(p1.vertex[3], p1.vertex[0]), v)));
-		point on_p2 = sum(p2.vertex[0], sum(mult(sub(p2.vertex[1], p2.vertex[0]), u), mult(sub(p2.vertex[3], p2.vertex[0]), v)));
-
-		point r = sub(on_p1, on_p2);
-		float lr = length(r);
-		if (fabs(lr) < DBL_EPSILON) {
-			cnt++;
-			continue;
-		}
-
-		//Visibility function
-		int flag = 0;
-        for (int j = 0; j < polygonCount && !flag; ++j) {
-			if (j == pl1 || j == pl2) continue;
-			flag = checkIntersection(poly[j], on_p1, on_p2);
+            iter_res = cosV(r, p2.normal);
+            iter_res *= cosV(mult(r, -1), p1.normal);
+            if (iter_res < 0) continue;
+            iter_res /=  lr * lr;
+            if (iter_res > 10) continue;
+            result += iter_res;
         }
-		if (flag)
-			continue;
-
-        iter_res = cosV(r, p2.normal);
-        iter_res *= cosV(mult(r, -1), p1.normal);
-        if (iter_res < 0) continue;
-		iter_res /=  lr * lr;
-		if (iter_res > 10) continue;
-		result += iter_res;
     }
-    result /= MONTE_KARLO_ITERATIONS_COUNT - cnt;
+    result /= MONTE_KARLO_ITERATIONS_COUNT * MONTE_KARLO_ITERATIONS_COUNT - cnt;
     result /= M_PI;
 	result *= square(p1) * square(p2);
     return result;
@@ -590,6 +597,8 @@ float computeFormFactorForPatches(patch p1, patch p2, int pl1, int pl2) {
 
 
 int computeRadiosity(int iterCount) {
+    clock_t t_start = clock();
+
 	for (int i = 0; i < patchCount; ++i)
 	{
 		radio[i].excident = radio[i].emmision;
@@ -616,6 +625,7 @@ int computeRadiosity(int iterCount) {
 			radio[i].deposit = sum(radio[i].deposit, radio[i].excident);
 		}
 	}
+	printf("Compute radiosity time %f\n", (float)(clock() - t_start) / CLOCKS_PER_SEC);
 	return 1;
 }
 
@@ -817,7 +827,7 @@ int useShaders(HDC hdc) {
     float * sides = calloc(6 * patchCount * COORDS_COUNT, sizeof(*sides));
     float * normals = calloc(6 * patchCount * COORDS_COUNT, sizeof(*normals));
 
-	const int magic_const = 4;
+	const int magic_const = 16;
     for (int i = 0; i < patchCount; ++i) {
         radio[i].deposit.x = 0;
         radio[i].deposit.y = 0;
