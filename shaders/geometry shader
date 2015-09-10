@@ -1,0 +1,26 @@
+#version 330 core
+
+layout(points) in;
+layout(triangle_strip, max_vertices = 4) out;
+
+in vec3 geometryColor[];
+in vec4 A[];
+in vec4 B[];
+in vec4 C[];
+in vec4 D[];
+
+out vec3 fragmentColor;
+
+void main(void) {
+    fragmentColor = geometryColor[0];
+    gl_Position = B[0];
+    EmitVertex();
+    gl_Position = A[0];
+    EmitVertex();
+    gl_Position = C[0];
+    EmitVertex();
+    gl_Position = D[0];
+    EmitVertex();
+
+    EndPrimitive();
+}

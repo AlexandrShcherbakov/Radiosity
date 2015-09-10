@@ -6,6 +6,5 @@ out vec4 color;
 
 void main(void)
 {
-        // зададим цвет пикселя
         color = vec4(fragmentColor, 1.0);
 }

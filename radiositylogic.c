@@ -22,7 +22,7 @@ int radiosityMain() {
     pt_poly = calloc(polygonCount, sizeof(*pt_poly));
     ptindoffsets = calloc(polygonCount + 1, sizeof(*pt_poly));
     ptindoffsets[0] = 0;
-    int k = 16;
+    int k = 4;
 
 	//Creation of patches
 	for (int i = 0; i < 6; ++i) {
@@ -53,7 +53,7 @@ int radiosityMain() {
 	char ff_file[50];
     sprintf(ff_file, "ff\\%d", patchCount);
     FILE *formfactfile;
-    if ((formfactfile = fopen(ff_file, "rb")) == NULL) {
+    if ((formfactfile = fopen(ff_file, "rb")) == NULL || 1) {
 		computeFormFactorForScene();
         formfactfile = fopen(ff_file, "wb");
         for (int i = 0; i < patchCount; ++i) {
@@ -99,6 +99,7 @@ int radiosityMain() {
         radio[i].reflectance.y = 250.0 / 255;
         radio[i].reflectance.z = 154.0 / 255;
     }
+    printf("OK\n");
     return 1;
 }
 
@@ -191,14 +192,14 @@ polygon * hardcodedPolygons() {
 	plgs[4].vertex[0].x = 1;
     plgs[4].vertex[0].y = -1;
     plgs[4].vertex[0].z = 1;
-    plgs[4].vertex[1].x = -1;
-    plgs[4].vertex[1].y = -1;
+    plgs[4].vertex[1].x = 1;
+    plgs[4].vertex[1].y = 1;
     plgs[4].vertex[1].z = 1;
     plgs[4].vertex[2].x = -1;
     plgs[4].vertex[2].y = 1;
     plgs[4].vertex[2].z = 1;
-    plgs[4].vertex[3].x = 1;
-    plgs[4].vertex[3].y = 1;
+    plgs[4].vertex[3].x = -1;
+    plgs[4].vertex[3].y = -1;
     plgs[4].vertex[3].z = 1;
 
     //Front wall
@@ -231,14 +232,14 @@ polygon * hardcodedPolygons() {
     plgs[6].vertex[0].y = -0.25;
     plgs[6].vertex[0].z = -0.75;
     plgs[6].vertex[1].x = -0.25;
-    plgs[6].vertex[1].y = -0.25;
-    plgs[6].vertex[1].z = -0.25;
+    plgs[6].vertex[1].y = 0.25;
+    plgs[6].vertex[1].z = -0.75;
     plgs[6].vertex[2].x = -0.25;
     plgs[6].vertex[2].y = 0.25;
     plgs[6].vertex[2].z = -0.25;
     plgs[6].vertex[3].x = -0.25;
-    plgs[6].vertex[3].y = 0.25;
-    plgs[6].vertex[3].z = -0.75;
+    plgs[6].vertex[3].y = -0.25;
+    plgs[6].vertex[3].z = -0.25;
 
     //Left wall
 	plgs[7].vertex = calloc(POINTS_IN_QUADRANGLE, sizeof(point));
@@ -249,15 +250,15 @@ polygon * hardcodedPolygons() {
 	plgs[7].vertex[0].x = 0.25;
     plgs[7].vertex[0].y = -0.25;
     plgs[7].vertex[0].z = -0.75;
-    plgs[7].vertex[1].x = 0.25;
+    plgs[7].vertex[1].x = -0.25;
     plgs[7].vertex[1].y = -0.25;
-    plgs[7].vertex[1].z = -0.25;
+    plgs[7].vertex[1].z = -0.75;
     plgs[7].vertex[2].x = -0.25;
     plgs[7].vertex[2].y = -0.25;
     plgs[7].vertex[2].z = -0.25;
-    plgs[7].vertex[3].x = -0.5;
+    plgs[7].vertex[3].x = 0.25;
     plgs[7].vertex[3].y = -0.25;
-    plgs[7].vertex[3].z = -0.75;
+    plgs[7].vertex[3].z = -0.25;
 
     //Right wall
 	plgs[8].vertex = calloc(POINTS_IN_QUADRANGLE, sizeof(point));
@@ -268,15 +269,15 @@ polygon * hardcodedPolygons() {
 	plgs[8].vertex[0].x = -0.25;
     plgs[8].vertex[0].y = 0.25;
     plgs[8].vertex[0].z = -0.75;
-    plgs[8].vertex[1].x = -0.25;
+    plgs[8].vertex[1].x = 0.25;
     plgs[8].vertex[1].y = 0.25;
-    plgs[8].vertex[1].z = -0.25;
+    plgs[8].vertex[1].z = -0.75;
     plgs[8].vertex[2].x = 0.25;
     plgs[8].vertex[2].y = 0.25;
     plgs[8].vertex[2].z = -0.25;
-    plgs[8].vertex[3].x = 0.25;
+    plgs[8].vertex[3].x = -0.25;
     plgs[8].vertex[3].y = 0.25;
-    plgs[8].vertex[3].z = -0.75;
+    plgs[8].vertex[3].z = -0.25;
 
     //Bottom wall
 	plgs[9].vertex = calloc(POINTS_IN_QUADRANGLE, sizeof(point));
@@ -287,14 +288,14 @@ polygon * hardcodedPolygons() {
 	plgs[9].vertex[0].x = 0.25;
     plgs[9].vertex[0].y = -0.25;
     plgs[9].vertex[0].z = -0.75;
-    plgs[9].vertex[1].x = -0.25;
-    plgs[9].vertex[1].y = -0.25;
+    plgs[9].vertex[1].x = 0.25;
+    plgs[9].vertex[1].y = 0.25;
     plgs[9].vertex[1].z = -0.75;
     plgs[9].vertex[2].x = -0.25;
     plgs[9].vertex[2].y = 0.25;
     plgs[9].vertex[2].z = -0.75;
-    plgs[9].vertex[3].x = 0.25;
-    plgs[9].vertex[3].y = 0.25;
+    plgs[9].vertex[3].x = -0.25;
+    plgs[9].vertex[3].y = -0.25;
     plgs[9].vertex[3].z = -0.75;
 
 	//Top wall
@@ -345,15 +346,15 @@ polygon * hardcodedPolygons() {
 	plgs[12].vertex[0].x = -0.65;
     plgs[12].vertex[0].y = -0.9;
     plgs[12].vertex[0].z = -0.9;
-    plgs[12].vertex[1].x = -0.65;
-    plgs[12].vertex[1].y = -0.9;
-    plgs[12].vertex[1].z = -0.9 + sqrt(0.125);
+    plgs[12].vertex[1].x = -0.9;
+    plgs[12].vertex[1].y = -0.65;
+    plgs[12].vertex[1].z = -0.9;
     plgs[12].vertex[2].x = -0.9;
     plgs[12].vertex[2].y = -0.65;
     plgs[12].vertex[2].z = -0.9 + sqrt(0.125);
-    plgs[12].vertex[3].x = -0.9;
-    plgs[12].vertex[3].y = -0.65;
-    plgs[12].vertex[3].z = -0.9;
+    plgs[12].vertex[3].x = -0.65;
+    plgs[12].vertex[3].y = -0.9;
+    plgs[12].vertex[3].z = -0.9 + sqrt(0.125);
 
 
 	//right-back wall
@@ -365,15 +366,15 @@ polygon * hardcodedPolygons() {
 	plgs[13].vertex[0].x = -0.9;
     plgs[13].vertex[0].y = -0.65;
     plgs[13].vertex[0].z = -0.9;
-    plgs[13].vertex[1].x = -0.9;
-    plgs[13].vertex[1].y = -0.65;
-    plgs[13].vertex[1].z = -0.9 + sqrt(0.125);
+    plgs[13].vertex[1].x = -0.65;
+    plgs[13].vertex[1].y = -0.4;
+    plgs[13].vertex[1].z = -0.9;
     plgs[13].vertex[2].x = -0.65;
     plgs[13].vertex[2].y = -0.4;
     plgs[13].vertex[2].z = -0.9 + sqrt(0.125);
-    plgs[13].vertex[3].x = -0.65;
-    plgs[13].vertex[3].y = -0.4;
-    plgs[13].vertex[3].z = -0.9;
+    plgs[13].vertex[3].x = -0.9;
+    plgs[13].vertex[3].y = -0.65;
+    plgs[13].vertex[3].z = -0.9 + sqrt(0.125);
 
 
     //bottom wall
@@ -385,13 +386,13 @@ polygon * hardcodedPolygons() {
 	plgs[14].vertex[0].x = -0.65;
     plgs[14].vertex[0].y = -0.9;
     plgs[14].vertex[0].z = -0.9;
-    plgs[14].vertex[1].x = -0.9;
+    plgs[14].vertex[1].x = -0.4;
     plgs[14].vertex[1].y = -0.65;
     plgs[14].vertex[1].z = -0.9;
     plgs[14].vertex[2].x = -0.65;
     plgs[14].vertex[2].y = -0.4;
     plgs[14].vertex[2].z = -0.9;
-    plgs[14].vertex[3].x = -0.4;
+    plgs[14].vertex[3].x = -0.9;
     plgs[14].vertex[3].y = -0.65;
     plgs[14].vertex[3].z = -0.9;
 
@@ -539,11 +540,11 @@ int computeFormFactorForPolygons(int p1, int p2) {
 }
 
 
-double computeFormFactorForPatches(patch p1, patch p2, int pl1, int pl2) {
-	double result = 0;
+float computeFormFactorForPatches(patch p1, patch p2, int pl1, int pl2) {
+	float result = 0;
 	int cnt = 0;
     for (int i = 0; i < MONTE_KARLO_ITERATIONS_COUNT; ++i) {
-		double iter_res = 0;
+		float iter_res = 0;
 
 		//Hammersley Point Set
 		float u = 0;
@@ -559,7 +560,7 @@ double computeFormFactorForPatches(patch p1, patch p2, int pl1, int pl2) {
 		point on_p2 = sum(p2.vertex[0], sum(mult(sub(p2.vertex[1], p2.vertex[0]), u), mult(sub(p2.vertex[3], p2.vertex[0]), v)));
 
 		point r = sub(on_p1, on_p2);
-		double lr = length(r);
+		float lr = length(r);
 		if (fabs(lr) < DBL_EPSILON) {
 			cnt++;
 			continue;
@@ -621,7 +622,7 @@ int computeRadiosity(int iterCount) {
 
 int drawScene(HDC hdc) {
 
-	const int magic_const = 256;
+	const int magic_const = 4 * 4;
     static int light = magic_const * 4;
     radio[light].emmision.x = 0;
     radio[light].emmision.y = 0;
@@ -738,7 +739,7 @@ int useShaders(HDC hdc) {
 	OPENGL_GET_PROC(PFNGLGETPROGRAMINFOLOGPROC, glGetProgramInfoLog)
 	OPENGL_GET_PROC(PFNGLVALIDATEPROGRAMPROC, glValidateProgram)
 
-	GLuint vertexShader, fragmentShader;
+	GLuint vertexShader, fragmentShader, geometryShader;
 	GLuint shaderProgram;
 	GLuint meshVAO;
 
@@ -747,51 +748,76 @@ int useShaders(HDC hdc) {
 	int sourceLength;
 
 	// создадим шейдерную программу и шейдеры для нее
-	shaderProgram  = glCreateProgram();
-	vertexShader   = glCreateShader(GL_VERTEX_SHADER);
-	fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+	shaderProgram  = glCreateProgram();                                          CHECK_GL_ERRORS
+	vertexShader   = glCreateShader(GL_VERTEX_SHADER);                           CHECK_GL_ERRORS
+	fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);                         CHECK_GL_ERRORS
+	geometryShader = glCreateShader(GL_GEOMETRY_SHADER);                         CHECK_GL_ERRORS
 
 	// загрузим вершинный шейдер
-	loadShader("shaders/vertex shader", &shaderSource, &sourceLength);
+	loadShader("shaders/vertex shader", &shaderSource, &sourceLength);           CHECK_GL_ERRORS
 
 	// зададим шейдеру исходный код и скомпилируем его
-	glShaderSource(vertexShader, 1, (const GLchar**)&shaderSource, (const GLint*)&sourceLength);
-	glCompileShader(vertexShader);
+	glShaderSource(vertexShader, 1, (const GLchar**)&shaderSource,
+                (const GLint*)&sourceLength);                                    CHECK_GL_ERRORS
+	glCompileShader(vertexShader);                                               CHECK_GL_ERRORS
 
 	free(shaderSource);
+
+	if (ShaderStatus(vertexShader, GL_COMPILE_STATUS) != GL_TRUE)
+        printf("BUGURT!!! Line: %d\n", __LINE__);
+
+    loadShader("shaders/geometry shader", &shaderSource, &sourceLength);           CHECK_GL_ERRORS
+
+	// зададим шейдеру исходный код и скомпилируем его
+	glShaderSource(geometryShader, 1, (const GLchar**)&shaderSource,
+                (const GLint*)&sourceLength);                                    CHECK_GL_ERRORS
+	glCompileShader(geometryShader);                                               CHECK_GL_ERRORS
+
+	free(shaderSource);
+
+	if (ShaderStatus(geometryShader, GL_COMPILE_STATUS) != GL_TRUE)
+        printf("BUGURT!!! Line: %d\n", __LINE__);
 
 	// загрузим фрагментный шейдер
-	loadShader("shaders/fragment shader", &shaderSource, &sourceLength);
+	loadShader("shaders/fragment shader", &shaderSource, &sourceLength);         CHECK_GL_ERRORS
 
 	// зададим шейдеру исходный код и скомпилируем его
-	glShaderSource(fragmentShader, 1, (const GLchar**)&shaderSource, (const GLint*)&sourceLength);
-	glCompileShader(fragmentShader);
+	glShaderSource(fragmentShader, 1, (const GLchar**)&shaderSource,
+                (const GLint*)&sourceLength);                                    CHECK_GL_ERRORS
+	glCompileShader(fragmentShader);                                             CHECK_GL_ERRORS
 
 	free(shaderSource);
+	if (ShaderStatus(vertexShader, GL_COMPILE_STATUS) != GL_TRUE)
+        printf("BUGURT!!! Line: %d\n", __LINE__);
 
 	// присоединим загруженные шейдеры к шейдерной программе
-	glAttachShader(shaderProgram, vertexShader);
-	glAttachShader(shaderProgram, fragmentShader);
+	glAttachShader(shaderProgram, vertexShader);                                 CHECK_GL_ERRORS
+	glAttachShader(shaderProgram, geometryShader);                               CHECK_GL_ERRORS
+	glAttachShader(shaderProgram, fragmentShader);                               CHECK_GL_ERRORS
 
 
 	// сборка шейдерной программы из прикрепленных шейдеров
-	glLinkProgram(shaderProgram);
+	glLinkProgram(shaderProgram);                                                CHECK_GL_ERRORS
+	if (ShaderProgramStatus(shaderProgram, GL_LINK_STATUS) != GL_TRUE)
+        printf("BUGURT!!! Line: %d\n", __LINE__);
 
 	// сделаем шейдерную программу активной
-	glUseProgram(shaderProgram);
+	glUseProgram(shaderProgram);                                                 CHECK_GL_ERRORS
 
 
 
 	//Set geometry
 	GLuint meshVBO;
 	GLuint meshVBO2;
-	glGenVertexArrays(1, &meshVAO);
-	glBindVertexArray(meshVAO);
+	glGenVertexArrays(1, &meshVAO);                                              CHECK_GL_ERRORS
+	glBindVertexArray(meshVAO);                                                  CHECK_GL_ERRORS
 
     float * colors = calloc(6 * patchCount * COLOR_COUNT, sizeof(*colors));
     float * coords = calloc(6 * patchCount * COORDS_COUNT, sizeof(*coords));
+    float * sides = calloc(6 * patchCount * COORDS_COUNT, sizeof(*sides));
+    float * normals = calloc(6 * patchCount * COORDS_COUNT, sizeof(*normals));
 
-	const int magic_const = 16;
+	const int magic_const = 4;
     for (int i = 0; i < patchCount; ++i) {
         radio[i].deposit.x = 0;
         radio[i].deposit.y = 0;
@@ -822,8 +848,27 @@ int useShaders(HDC hdc) {
 		for (int i1 = 0; i1 < pt_poly[i].axis1; ++i1) {
 			for (int j1 = 0; j1 < pt_poly[i].axis2; ++j1) {
 				int pt_ind = ptindoffsets[i] + pt_poly[i].axis2 * i1 + j1;
-				point * ct = pt_poly[i].patches[i1][j1].vertex;
-				for (int it = 0; it < 3; ++it) {
+				point ct = pt_poly[i].patches[i1][j1].vertex[0];
+				colors[pt * COLOR_COUNT] = (float)pow(radio[pt_ind].deposit.x,
+                                                         1.0 / 2);
+                colors[pt * COLOR_COUNT + 1] = (float)pow(radio[pt_ind].deposit.y,
+                                                         1.0 / 2);
+                colors[pt * COLOR_COUNT + 2] = (float)pow(radio[pt_ind].deposit.z,
+                                                         1.0 / 2);
+                coords[pt * COORDS_COUNT] = (float)ct.y;
+                coords[pt * COORDS_COUNT + 1] = (float)ct.z;
+                coords[pt * COORDS_COUNT + 2] = (float)ct.x - 3.0f;
+                point side = sub(pt_poly[i].patches[i1][j1].vertex[1],
+                                 pt_poly[i].patches[i1][j1].vertex[0]);
+                //printf("%f %f %f\n", side.x, side.y, side.z);
+                sides[pt * COORDS_COUNT] = (float)side.y;
+                sides[pt * COORDS_COUNT + 1] = (float)side.z;
+                sides[pt * COORDS_COUNT + 2] = (float)side.x;
+                normals[pt * COORDS_COUNT] = (float)poly[i].normal.y;
+                normals[pt * COORDS_COUNT + 1] = (float)poly[i].normal.z;
+                normals[pt * COORDS_COUNT + 2] = (float)poly[i].normal.x;
+                pt++;
+				/*for (int it = 0; it < 3; ++it) {
 					colors[pt * COLOR_COUNT] = (float)pow(radio[pt_ind].deposit.x,
 															 1.0 / 2);
 					colors[pt * COLOR_COUNT + 1] = (float)pow(radio[pt_ind].deposit.y,
@@ -846,43 +891,77 @@ int useShaders(HDC hdc) {
 					coords[pt * COORDS_COUNT + 1] = (float)ct[it % 4].z;
 					coords[pt * COORDS_COUNT + 2] = (float)ct[it % 4].x - 3.0f;
 					pt++;
-				}
+				}*/
 			}
         }
     }
 
     int vertexOffsetPosition = 0;
 	int vertexOffsetColor = 0;
-	GLint positionLocation, colorLocation;
+	GLint positionLocation, colorLocation, sideLocation, normalsLocation;
 
-    glGenBuffers(1, &meshVBO);
-	glBindBuffer(GL_ARRAY_BUFFER, meshVBO);
-    glBufferData(GL_ARRAY_BUFFER, pt * sizeof(*coords) * COORDS_COUNT, coords, GL_STATIC_DRAW);
+    glGenBuffers(1, &meshVBO);                                                   CHECK_GL_ERRORS
+	glBindBuffer(GL_ARRAY_BUFFER, meshVBO);                                      CHECK_GL_ERRORS
+    glBufferData(GL_ARRAY_BUFFER, pt * sizeof(*coords) * COORDS_COUNT, coords,
+                 GL_STATIC_DRAW);                                                CHECK_GL_ERRORS
 
 
-	positionLocation = glGetAttribLocation(shaderProgram, "position");
+	positionLocation = glGetAttribLocation(shaderProgram, "position");           CHECK_GL_ERRORS
 	if (positionLocation != -1)
 	{
 			glVertexAttribPointer(positionLocation, 3, GL_FLOAT, GL_FALSE,
-					sizeof(*coords) * COORDS_COUNT, (const GLvoid*)vertexOffsetPosition);
-			glEnableVertexAttribArray(positionLocation);
+					sizeof(*coords) * COORDS_COUNT,
+                         (const GLvoid*)vertexOffsetPosition);                   CHECK_GL_ERRORS
+			glEnableVertexAttribArray(positionLocation);                         CHECK_GL_ERRORS
 	}
 
-	glGenBuffers(2, &meshVBO2);
-	glBindBuffer(GL_ARRAY_BUFFER, meshVBO2);
-    glBufferData(GL_ARRAY_BUFFER, pt * sizeof(*colors) * COLOR_COUNT, colors, GL_STATIC_DRAW);
+	glGenBuffers(2, &meshVBO2);                                                  CHECK_GL_ERRORS
+	glBindBuffer(GL_ARRAY_BUFFER, meshVBO2);                                     CHECK_GL_ERRORS
+    glBufferData(GL_ARRAY_BUFFER, pt * sizeof(*colors) * COLOR_COUNT, colors,
+                 GL_STATIC_DRAW);                                                CHECK_GL_ERRORS
 
 
-	colorLocation = glGetAttribLocation(shaderProgram, "color");
+	colorLocation = glGetAttribLocation(shaderProgram, "color");                 CHECK_GL_ERRORS
 	if (colorLocation != -1)
 	{
 			glVertexAttribPointer(colorLocation, 3, GL_FLOAT, GL_FALSE,
-					sizeof(*colors) * COLOR_COUNT, (const GLvoid*)vertexOffsetColor);
-			glEnableVertexAttribArray(colorLocation);
+					sizeof(*colors) * COLOR_COUNT,
+                         (const GLvoid*)vertexOffsetColor);                      CHECK_GL_ERRORS
+			glEnableVertexAttribArray(colorLocation);                            CHECK_GL_ERRORS
+	}
+
+	glGenBuffers(3, &meshVBO);                                                   CHECK_GL_ERRORS
+	glBindBuffer(GL_ARRAY_BUFFER, meshVBO);                                      CHECK_GL_ERRORS
+    glBufferData(GL_ARRAY_BUFFER, pt * sizeof(*sides) * COORDS_COUNT, sides,
+                 GL_STATIC_DRAW);                                                CHECK_GL_ERRORS
+
+
+	sideLocation = glGetAttribLocation(shaderProgram, "side");                   CHECK_GL_ERRORS
+	if (sideLocation != -1)
+	{
+			glVertexAttribPointer(sideLocation, 3, GL_FLOAT, GL_FALSE,
+					sizeof(*sides) * COORDS_COUNT, (const GLvoid*)0);            CHECK_GL_ERRORS
+			glEnableVertexAttribArray(sideLocation);                             CHECK_GL_ERRORS
+	}
+
+	glGenBuffers(4, &meshVBO);                                                   CHECK_GL_ERRORS
+	glBindBuffer(GL_ARRAY_BUFFER, meshVBO);                                      CHECK_GL_ERRORS
+    glBufferData(GL_ARRAY_BUFFER, pt * sizeof(*normals) * COORDS_COUNT, normals,
+                 GL_STATIC_DRAW);                                                CHECK_GL_ERRORS
+
+
+	normalsLocation = glGetAttribLocation(shaderProgram, "normal");              CHECK_GL_ERRORS
+	if (normalsLocation != -1)
+	{
+			glVertexAttribPointer(normalsLocation, 3, GL_FLOAT, GL_FALSE,
+					sizeof(*normals) * COORDS_COUNT, (const GLvoid*)0);          CHECK_GL_ERRORS
+			glEnableVertexAttribArray(normalsLocation);                         CHECK_GL_ERRORS
 	}
 
     free(colors);
     free(coords);
+    free(sides);
+    free(normals);
 
 
 
@@ -901,24 +980,24 @@ int useShaders(HDC hdc) {
 	Matrix4Perspective(projectionMatrix, 45.0f, aspectRatio, 0.0f, 5.0f);
 
 	// получим индекс юниформа projectionMatrix из шейдерной программы
-	projectionMatrixLocation = glGetUniformLocation(shaderProgram, "projectionMatrix");
+	projectionMatrixLocation = glGetUniformLocation(shaderProgram, "projectionMatrix"); CHECK_GL_ERRORS
 
 	// передадим матрицу в шейдер
 	if (projectionMatrixLocation != -1)
-		glUniformMatrix4fv(projectionMatrixLocation, 1, GL_TRUE, projectionMatrix);
+		glUniformMatrix4fv(projectionMatrixLocation, 1, GL_TRUE, projectionMatrix);CHECK_GL_ERRORS
 
 
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);                          CHECK_GL_ERRORS
 
 	// делаем шейдерную программу активной
-	glUseProgram(shaderProgram);
+	glUseProgram(shaderProgram);                                                 CHECK_GL_ERRORS
 
 	// для рендеринга исопльзуем VAO
-	glBindVertexArray(meshVAO);
+	glBindVertexArray(meshVAO);                                                  CHECK_GL_ERRORS
 
 	// рендер треугольника из VBO привязанного к VAO
-	glPointSize(2.0f);
-	glDrawArrays(GL_TRIANGLES, 0, pt);
+	glPointSize(2.0f);                                                           CHECK_GL_ERRORS
+	glDrawArrays(GL_POINTS, 0, pt);                                           CHECK_GL_ERRORS
 	SwapBuffers(hdc);
 }
 
@@ -961,7 +1040,7 @@ inline point sub(point p1, point p2) {
 }
 
 
-inline point mult(point p, double k) {
+inline point mult(point p, float k) {
     point res = {p.x * k, p.y * k, p.z * k};
     return res;
 }
@@ -973,8 +1052,8 @@ inline point sum(point p1, point p2) {
 }
 
 
-double square(polygon plg) {
-	double res = 0;
+float square(polygon plg) {
+	float res = 0;
 	for (int i = 2; i < plg.length; ++i) {
         res += length(multV(sub(plg.vertex[i], plg.vertex[0]),
 							sub(plg.vertex[i - 1], plg.vertex[0])));
@@ -991,7 +1070,7 @@ point multV(point p1, point p2) {
 }
 
 
-inline double length(point p) {
+inline float length(point p) {
 	return sqrt(p.x * p.x + p.y * p.y + p.z * p.z);
 }
 
@@ -1015,8 +1094,8 @@ point center(patch p) {
 point randomPointInSquare(polygon p) {
     point p1 = sub(p.vertex[1], p.vertex[0]);
     point p2 = sub(p.vertex[3], p.vertex[0]);
-    double l1 = (double)rand() / RAND_MAX;
-    double l2 = (double)rand() / RAND_MAX;
+    float l1 = (float)rand() / RAND_MAX;
+    float l2 = (float)rand() / RAND_MAX;
     return sum(p.vertex[0], sum(mult(p1, l1), mult(p2, l2)));
 }
 
@@ -1026,8 +1105,8 @@ point polarizePointInPolygon(polygon pl, point pnt) {
 }
 
 point randomPoint(patch p) {
-    double * weightes = calloc(p.length, sizeof(*weightes));
-    double s = 0;
+    float * weightes = calloc(p.length, sizeof(*weightes));
+    float s = 0;
     for (int i = 0; i < p.length; ++i) {
         weightes[i] = rand();
         s += weightes[i];
@@ -1045,18 +1124,18 @@ point randomPoint(patch p) {
 }
 
 
-double multS(point p1, point p2) {
+float multS(point p1, point p2) {
     return p1.x * p2.x + p1.y * p2.y + p1.z * p2.z;
 }
 
 
-double cosV(point p1, point p2) {
+float cosV(point p1, point p2) {
 	return multS(p1, p2) / length(p1) / length(p2);
 }
 
 
 int inPolygon(polygon pl, point p) {
-	double sq = 0;
+	float sq = 0;
 	for (int i = 1; i <= pl.length; ++i) {
         sq += length(multV(sub(pl.vertex[i % pl.length], p),
 							sub(pl.vertex[i - 1], p)));
@@ -1065,16 +1144,16 @@ int inPolygon(polygon pl, point p) {
 }
 
 
-double distance(polygon pl, point p) {
-    double d = -multS(pl.normal, pl.vertex[0]);
+float distance(polygon pl, point p) {
+    float d = -multS(pl.normal, pl.vertex[0]);
     return multS(pl.normal, p) + d;
 }
 
 
 int checkIntersection(polygon pl, point p1, point p2) {
     point aug = sub(p2, p1);
-    double d = -multS(pl.normal, pl.vertex[0]);
-    double t = multS(pl.normal, aug);
+    float d = -multS(pl.normal, pl.vertex[0]);
+    float t = multS(pl.normal, aug);
     if (fabs(t) < DBL_EPSILON) return 0;
     t =  -(d + multS(pl.normal, p1)) / t;
     if (t <= 0 || t > 1) {

@@ -4,11 +4,28 @@ uniform mat4 projectionMatrix;
 
 in vec3 position;
 in vec3 color;
+in vec3 side;
+in vec3 normal;
 
-out vec3 fragmentColor;
+out vec3 geometryColor;
+out vec4 A;
+out vec4 B;
+out vec4 C;
+out vec4 D;
 
 void main(void)
 {
-        gl_Position   = projectionMatrix * vec4(position, 1.0);
-        fragmentColor = color;
+        vec3 pnt = position;
+        vec3 sd = side;
+        gl_Position   = projectionMatrix * vec4(pnt, 1.0);
+        A = projectionMatrix * vec4(pnt, 1.0);
+        pnt += sd;
+        sd = cross(side, normal);
+        B = projectionMatrix * vec4(pnt, 1.0);
+        pnt += sd;
+        sd = cross(sd, normal);
+        C = projectionMatrix * vec4(pnt, 1.0);
+        D = projectionMatrix * vec4(pnt + sd, 1.0);
+
+        geometryColor = color;
 }

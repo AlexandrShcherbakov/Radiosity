@@ -9,14 +9,14 @@
 	"GL/wglext.h"
 	"GL/glext.h"
 
-1441786101 d:\dropbox\radiosity\radiosity\radiositylogic.h
+1441879974 d:\dropbox\radiosity\radiosity\radiositylogic.h
 	<windows.h>
 	<gl/gl.h>
 	<gl/glu.h>
 	"GL/wglext.h"
 	"GL/glext.h"
 
-1441785561 source:d:\dropbox\radiosity\radiosity\radiositylogic.c
+1441879877 source:d:\dropbox\radiosity\radiosity\radiositylogic.c
 	"radiositylogic.h"
 	<stdio.h>
 	<stdlib.h>

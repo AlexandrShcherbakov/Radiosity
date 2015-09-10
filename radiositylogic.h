@@ -57,7 +57,7 @@ PFNGLUNIFORMMATRIX4FVPROC   glUniformMatrix4fv;
 
 ///Type for representation of point in 3D space
     typedef struct point {
-        double x, y, z;
+        float x, y, z;
     } point;
 
 ///Type for representation of polygon in 3D space
@@ -87,7 +87,7 @@ PFNGLUNIFORMMATRIX4FVPROC   glUniformMatrix4fv;
 
 ///Struct for sort polygons
     typedef struct com_pare {
-    	double distance;
+    	float distance;
     	int num;
     } com_pare;
 
@@ -116,7 +116,7 @@ PFNGLUNIFORMMATRIX4FVPROC   glUniformMatrix4fv;
     int computeFormFactorForPolygons(int p1, int p2);
 
 ///Computes form-factor for two patches
-	double computeFormFactorForPatches(patch p1, patch p2, int pl1, int pl2);
+	float computeFormFactorForPatches(patch p1, patch p2, int pl1, int pl2);
 
 ///Returns scene which writen in code
 	polygon * hardcodedPolygons();
@@ -157,19 +157,19 @@ PFNGLUNIFORMMATRIX4FVPROC   glUniformMatrix4fv;
     point sub(point p1, point p2);
 
 ///Multiply point to number
-    point mult(point p, double k);
+    point mult(point p, float k);
 
 ///Sum for two points
     point sum(point p1, point p2);
 
 ///Square of polygon
-    double square(polygon plg);
+    float square(polygon plg);
 
 ///Vector multiplication for two vectors
 	point multV(point p1, point p2);
 
 ///Length of vector
-	double length(point p);
+	float length(point p);
 
 ///Normal vector for polygon
     point normal(polygon p);
@@ -187,10 +187,10 @@ PFNGLUNIFORMMATRIX4FVPROC   glUniformMatrix4fv;
 	point randomPoint(patch p);
 
 ///Scalar multiplication for two vectors
-	double multS(point p1, point p2);
+	float multS(point p1, point p2);
 
 ///Cosinus for angle between two vectors
-	double cosV(point p1, point p2);
+	float cosV(point p1, point p2);
 
 ///Check if point in polygon
 	int inPolygon(polygon pl, point p);
@@ -199,7 +199,7 @@ PFNGLUNIFORMMATRIX4FVPROC   glUniformMatrix4fv;
     int compar (const void* p1, const void* p2);
 
 ///Distance between point and area
-	double distance(polygon pl, point p);
+	float distance(polygon pl, point p);
 
 ///Check if ray has mutual point with polygon
     int checkIntersection(polygon pl, point p1, point p2);
@@ -226,7 +226,7 @@ enum {
 ///
 
 ///Form factor for scene
-static double **ff;
+static float **ff;
 
 ///Polygons
 static polygon *poly;
@@ -245,12 +245,6 @@ static int patchCount;
 
 ///Array of offsets for index of patch
 static int *ptindoffsets;
-
-///Shaders
-GLuint shaderProgram;
-
-///
-GLuint meshVAO;
 
 #ifdef __cplusplus
 }
@@ -271,3 +265,58 @@ GLenum g_OpenGLError;
                 printf("OpenGL error 0x%X\n", (unsigned)g_OpenGLError);
 
 #endif // RADIOSITYLOGIC_H_INCLUDED
+
+
+static void ThrowExceptionOnGLError(int line, const char *file)
+{
+  static char errMsg[512];
+
+  GLenum gl_error = glGetError();
+
+  if(gl_error == GL_NO_ERROR)
+    return;
+
+  switch(gl_error)
+  {
+  case GL_INVALID_ENUM:
+    sprintf(errMsg, "GL_INVALID_ENUM file %s line %d\n", file, line);
+    break;
+
+  case GL_INVALID_VALUE:
+    sprintf(errMsg, "GL_INVALID_VALUE file %s line %d\n",  file, line);
+    break;
+
+  case GL_INVALID_OPERATION:
+    sprintf(errMsg, "GL_INVALID_OPERATION file %s line %d\n",  file, line);
+    break;
+
+  case GL_STACK_OVERFLOW:
+    sprintf(errMsg, "GL_STACK_OVERFLOW file %s line %d\n",  file, line);
+    break;
+
+  case GL_STACK_UNDERFLOW:
+    sprintf(errMsg, "GL_STACK_UNDERFLOW file %s line %d\n",  file, line);
+    break;
+
+  case GL_OUT_OF_MEMORY:
+    sprintf(errMsg, "GL_OUT_OF_MEMORY file %s line %d\n",  file, line);
+    break;
+
+  case GL_TABLE_TOO_LARGE:
+    sprintf(errMsg, "GL_TABLE_TOO_LARGE file %s line %d\n",  file, line);
+    break;
+
+  case GL_NO_ERROR:
+    break;
+
+  default:
+    sprintf(errMsg, "Unknown error @ file %s line %d\n",  file, line);
+    break;
+  }
+
+  if(gl_error != GL_NO_ERROR)
+    printf("!!!ERROR BUGURT\n%s", errMsg);
+}
+
+
+#define CHECK_GL_ERRORS ThrowExceptionOnGLError(__LINE__,__FILE__);
