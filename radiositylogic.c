@@ -5,6 +5,7 @@
 #include <math.h>
 #include <windows.h>
 #include <float.h>
+#include <x86intrin.h>
 
 #include <time.h>
 
@@ -608,7 +609,24 @@ int computeRadiosity(int iterCount) {
 		radio[i].deposit = sum(radio[i].deposit, radio[i].excident);
 	}
 
-	for (int iter = 0; iter < iterCount; iter++) {
+
+	//Precompute
+	for (int i = 0; i < patchCount; i++) {
+		if (radio[i].excident.x != 0) {
+			for (int j = 0; j < patchCount; j++) {
+			radio[j].incident = sum(radio[j].incident,
+										mult(radio[i].excident, ff[j][i]));
+			}
+		}
+	}
+	for (int i = 0; i < patchCount; ++i) {
+		radio[i].excident.x = radio[i].incident.x * radio[i].reflectance.x;
+		radio[i].excident.y = radio[i].incident.y * radio[i].reflectance.y;
+		radio[i].excident.z = radio[i].incident.z * radio[i].reflectance.z;
+		radio[i].deposit = sum(radio[i].deposit, radio[i].excident);
+	}
+
+	for (int iter = 0; iter < iterCount - 1; iter++) {
 		for (int i = 0; i < patchCount; i++) {
 			radio[i].incident.x = 0;
 			radio[i].incident.y = 0;
@@ -624,6 +642,72 @@ int computeRadiosity(int iterCount) {
 			radio[i].excident.z = radio[i].incident.z * radio[i].reflectance.z;
 			radio[i].deposit = sum(radio[i].deposit, radio[i].excident);
 		}
+	}
+	printf("Compute radiosity time %f\n", (float)(clock() - t_start) / CLOCKS_PER_SEC);
+	return 1;
+}
+
+
+int computeRadiositySSE(int iterCount) {
+    clock_t t_start = clock();
+
+    __m128 srad[patchCount][5];
+    for (int i = 0; i < patchCount; ++i) {
+        srad[i][0] = _mm_setzero_ps();//emmision
+        srad[i][1] = _mm_set_ps(0.0f, radio[i].reflectance.x, radio[i].reflectance.y, radio[i].reflectance.z);//reflectance
+        srad[i][2] = _mm_set_ps(0.0f, radio[i].incident.x, radio[i].incident.y, radio[i].incident.z);//incident
+        srad[i][3] = _mm_set_ps(0.0f, radio[i].emmision.x, radio[i].emmision.y, radio[i].emmision.z);//excident
+        srad[i][4] = _mm_set_ps(0.0f, radio[i].emmision.x, radio[i].emmision.y, radio[i].emmision.z);//deposit
+    }
+
+
+	//Precompute
+	for (int i = 0; i < patchCount; i++) {
+		if (radio[i].excident.x != 0) {
+			for (int j = 0; j < patchCount; j++) {
+               srad[j][2] = _mm_add_ps(srad[j][2], _mm_mul_ps(srad[i][3], _mm_set1_ps(ff[j][i])));
+			}
+		}
+	}
+	for (int i = 0; i < patchCount; ++i) {
+        srad[i][3] = _mm_mul_ps(srad[i][2], srad[i][1]);
+        srad[i][4] = _mm_add_ps(srad[i][4], srad[i][3]);
+	}
+
+	for (int iter = 0; iter < iterCount - 1; iter++) {
+		for (int i = 0; i < patchCount; i++) {
+            srad[i][2] = _mm_setzero_ps();
+			for (int j = 0; j < patchCount; j++) {
+			    srad[i][2] = _mm_add_ps(srad[i][2], _mm_mul_ps(srad[j][3], _mm_set1_ps(ff[i][j])));
+			}
+		}
+		for (int i = 0; i < patchCount; ++i) {
+		    srad[i][3] = _mm_mul_ps(srad[i][2], srad[i][1]);
+            srad[i][4] = _mm_add_ps(srad[i][4], srad[i][3]);
+		}
+	}
+    float tmp[4];
+	for (int i = 0; i < patchCount; ++i) {
+        _mm_store_ps(tmp, srad[i][0]);
+        radio[i].emmision.x = tmp[1];
+        radio[i].emmision.y = tmp[2];
+        radio[i].emmision.z = tmp[3];
+        _mm_store_ps(tmp, srad[i][1]);
+        radio[i].reflectance.x = tmp[1];
+        radio[i].reflectance.y = tmp[2];
+        radio[i].reflectance.z = tmp[3];
+        _mm_store_ps(tmp, srad[i][2]);
+        radio[i].incident.x = tmp[1];
+        radio[i].incident.y = tmp[2];
+        radio[i].incident.z = tmp[3];
+        _mm_store_ps(tmp, srad[i][3]);
+        radio[i].excident.x = tmp[1];
+        radio[i].excident.y = tmp[2];
+        radio[i].excident.z = tmp[3];
+        _mm_store_ps(tmp, srad[i][4]);
+        radio[i].deposit.x = tmp[1];
+        radio[i].deposit.y = tmp[2];
+        radio[i].deposit.z = tmp[3];
 	}
 	printf("Compute radiosity time %f\n", (float)(clock() - t_start) / CLOCKS_PER_SEC);
 	return 1;
@@ -849,7 +933,7 @@ int useShaders(HDC hdc) {
 	radio[light].emmision.x = magic_const * magic_const / 4;
 	radio[light].emmision.y = magic_const * magic_const / 4;
 	radio[light].emmision.z = magic_const * magic_const / 4;
-	computeRadiosity(2);
+	computeRadiositySSE(2);
 
     int pt = 0;
 
@@ -878,30 +962,6 @@ int useShaders(HDC hdc) {
                 normals[pt * COORDS_COUNT + 1] = (float)poly[i].normal.z;
                 normals[pt * COORDS_COUNT + 2] = (float)poly[i].normal.x;
                 pt++;
-				/*for (int it = 0; it < 3; ++it) {
-					colors[pt * COLOR_COUNT] = (float)pow(radio[pt_ind].deposit.x,
-															 1.0 / 2);
-					colors[pt * COLOR_COUNT + 1] = (float)pow(radio[pt_ind].deposit.y,
-															 1.0 / 2);
-					colors[pt * COLOR_COUNT + 2] = (float)pow(radio[pt_ind].deposit.z,
-															 1.0 / 2);
-					coords[pt * COORDS_COUNT] = (float)ct[it].y;
-					coords[pt * COORDS_COUNT + 1] = (float)ct[it].z;
-					coords[pt * COORDS_COUNT + 2] = (float)ct[it].x - 3.0f;
-					pt++;
-				}
-				for (int it = 2; it < 5; ++it) {
-					colors[pt * COLOR_COUNT] = (float)pow(radio[pt_ind].deposit.x,
-															 1.0 / 2);
-					colors[pt * COLOR_COUNT + 1] = (float)pow(radio[pt_ind].deposit.y,
-															 1.0 / 2);
-					colors[pt * COLOR_COUNT + 2] = (float)pow(radio[pt_ind].deposit.z,
-															 1.0 / 2);
-					coords[pt * COORDS_COUNT] = (float)ct[it % 4].y;
-					coords[pt * COORDS_COUNT + 1] = (float)ct[it % 4].z;
-					coords[pt * COORDS_COUNT + 2] = (float)ct[it % 4].x - 3.0f;
-					pt++;
-				}*/
 			}
         }
     }
@@ -1007,8 +1067,8 @@ int useShaders(HDC hdc) {
 
 	// рендер треугольника из VBO привязанного к VAO
 	glPointSize(2.0f);                                                           CHECK_GL_ERRORS
-	glDrawArrays(GL_POINTS, 0, pt);                                           CHECK_GL_ERRORS
-	SwapBuffers(hdc);
+	glDrawArrays(GL_POINTS, 0, pt);                                              CHECK_GL_ERRORS
+	SwapBuffers(hdc);                                                            CHECK_GL_ERRORS
 }
 
 
