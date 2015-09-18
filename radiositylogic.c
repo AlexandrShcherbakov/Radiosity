@@ -6,6 +6,7 @@
 #include <windows.h>
 #include <float.h>
 #include <x86intrin.h>
+#include <omp.h>
 
 #include <time.h>
 
@@ -23,7 +24,7 @@ int radiosityMain() {
     pt_poly = calloc(polygonCount, sizeof(*pt_poly));
     ptindoffsets = calloc(polygonCount + 1, sizeof(*pt_poly));
     ptindoffsets[0] = 0;
-    int k = 16;
+    int k = 8;
 
 	//Creation of patches
 	for (int i = 0; i < 6; ++i) {
@@ -511,10 +512,12 @@ int createPatchesFromQuadrangle(int polygonIndex, int ptCount) {
 
 
 int computeFormFactorForScene() {
+	printf("FF start\n");
     for (int i = 0; i < polygonCount; ++i) {
         for (int j = i + 1; j < polygonCount; ++j) {
+			clock_t tm = clock();
             computeFormFactorForPolygons(i, j);
-            printf("%d %d\n", i, j);
+            printf("%d %d %f\n", i, j, (float)(clock() - tm) / CLOCKS_PER_SEC);
         }
     }
     return 1;
@@ -651,63 +654,66 @@ int computeRadiosity(int iterCount) {
 int computeRadiositySSE(int iterCount) {
     clock_t t_start = clock();
 
-    __m128 srad[patchCount][5];
+    __m128 srad[VECTORS_IN_RADIOSITY][patchCount];
     for (int i = 0; i < patchCount; ++i) {
-        srad[i][0] = _mm_setzero_ps();//emmision
-        srad[i][1] = _mm_set_ps(0.0f, radio[i].reflectance.x, radio[i].reflectance.y, radio[i].reflectance.z);//reflectance
-        srad[i][2] = _mm_set_ps(0.0f, radio[i].incident.x, radio[i].incident.y, radio[i].incident.z);//incident
-        srad[i][3] = _mm_set_ps(0.0f, radio[i].emmision.x, radio[i].emmision.y, radio[i].emmision.z);//excident
-        srad[i][4] = _mm_set_ps(0.0f, radio[i].emmision.x, radio[i].emmision.y, radio[i].emmision.z);//deposit
+        srad[0][i] = _mm_setzero_ps();//emmision
+        srad[1][i] = _mm_set_ps(0.0f, radio[i].reflectance.x, radio[i].reflectance.y, radio[i].reflectance.z);//reflectance
+        srad[2][i] = _mm_set_ps(0.0f, radio[i].incident.x, radio[i].incident.y, radio[i].incident.z);//incident
+        srad[3][i] = _mm_set_ps(0.0f, radio[i].emmision.x, radio[i].emmision.y, radio[i].emmision.z);//excident
+        srad[4][i] = _mm_add_ps(_mm_set_ps(0.0f, radio[i].deposit.x, radio[i].deposit.y, radio[i].deposit.z), srad[3][i]);//deposit
     }
 
 
 	//Precompute
 	for (int i = 0; i < patchCount; i++) {
-		if (radio[i].excident.x != 0) {
+		if (radio[i].emmision.x != 0) {
 			for (int j = 0; j < patchCount; j++) {
-               srad[j][2] = _mm_add_ps(srad[j][2], _mm_mul_ps(srad[i][3], _mm_set1_ps(ff[j][i])));
+               srad[2][j] = _mm_add_ps(srad[2][j], _mm_mul_ps(srad[3][i], _mm_set1_ps(ff[j][i])));
 			}
 		}
 	}
 	for (int i = 0; i < patchCount; ++i) {
-        srad[i][3] = _mm_mul_ps(srad[i][2], srad[i][1]);
-        srad[i][4] = _mm_add_ps(srad[i][4], srad[i][3]);
+        srad[3][i] = _mm_mul_ps(srad[2][i], srad[1][i]);
+        srad[4][i] = _mm_add_ps(srad[4][i], srad[3][i]);
 	}
 
+    omp_set_dynamic(0);
+    omp_set_num_threads(4);
 	for (int iter = 0; iter < iterCount - 1; iter++) {
+		#pragma omp parallel for
 		for (int i = 0; i < patchCount; i++) {
-            srad[i][2] = _mm_setzero_ps();
+            srad[2][i] = _mm_setzero_ps();
 			for (int j = 0; j < patchCount; j++) {
-			    srad[i][2] = _mm_add_ps(srad[i][2], _mm_mul_ps(srad[j][3], _mm_set1_ps(ff[i][j])));
+			    srad[2][i] = _mm_add_ps(srad[2][i], _mm_mul_ps(srad[3][j], _mm_set1_ps(ff[i][j])));
 			}
 		}
 		for (int i = 0; i < patchCount; ++i) {
-		    srad[i][3] = _mm_mul_ps(srad[i][2], srad[i][1]);
-            srad[i][4] = _mm_add_ps(srad[i][4], srad[i][3]);
+		    srad[3][i] = _mm_mul_ps(srad[2][i], srad[1][i]);
+            srad[4][i] = _mm_add_ps(srad[4][i], srad[3][i]);
 		}
 	}
     float tmp[4];
 	for (int i = 0; i < patchCount; ++i) {
-        _mm_store_ps(tmp, srad[i][0]);
-        radio[i].emmision.x = tmp[1];
-        radio[i].emmision.y = tmp[2];
-        radio[i].emmision.z = tmp[3];
-        _mm_store_ps(tmp, srad[i][1]);
-        radio[i].reflectance.x = tmp[1];
-        radio[i].reflectance.y = tmp[2];
-        radio[i].reflectance.z = tmp[3];
-        _mm_store_ps(tmp, srad[i][2]);
-        radio[i].incident.x = tmp[1];
-        radio[i].incident.y = tmp[2];
-        radio[i].incident.z = tmp[3];
-        _mm_store_ps(tmp, srad[i][3]);
-        radio[i].excident.x = tmp[1];
-        radio[i].excident.y = tmp[2];
-        radio[i].excident.z = tmp[3];
-        _mm_store_ps(tmp, srad[i][4]);
-        radio[i].deposit.x = tmp[1];
-        radio[i].deposit.y = tmp[2];
-        radio[i].deposit.z = tmp[3];
+        _mm_store_ps(tmp, srad[0][i]);
+        radio[i].emmision.x = tmp[2];
+        radio[i].emmision.y = tmp[1];
+        radio[i].emmision.z = tmp[0];
+        _mm_store_ps(tmp, srad[1][i]);
+        radio[i].reflectance.x = tmp[2];
+        radio[i].reflectance.y = tmp[1];
+        radio[i].reflectance.z = tmp[0];
+        _mm_store_ps(tmp, srad[2][i]);
+        radio[i].incident.x = tmp[2];
+        radio[i].incident.y = tmp[1];
+        radio[i].incident.z = tmp[0];
+        _mm_store_ps(tmp, srad[3][i]);
+        radio[i].excident.x = tmp[2];
+        radio[i].excident.y = tmp[1];
+        radio[i].excident.z = tmp[0];
+        _mm_store_ps(tmp, srad[4][i]);
+        radio[i].deposit.x = tmp[2];
+        radio[i].deposit.y = tmp[1];
+        radio[i].deposit.z = tmp[0];
 	}
 	printf("Compute radiosity time %f\n", (float)(clock() - t_start) / CLOCKS_PER_SEC);
 	return 1;
@@ -717,7 +723,7 @@ int computeRadiositySSE(int iterCount) {
 int drawScene(HDC hdc) {
 
 	const int magic_const = 4 * 4;
-    static int light = magic_const * 4;
+    static int light = 4;
     radio[light].emmision.x = 0;
     radio[light].emmision.y = 0;
     radio[light].emmision.z = 0;
@@ -911,7 +917,7 @@ int useShaders(HDC hdc) {
     float * sides = calloc(6 * patchCount * COORDS_COUNT, sizeof(*sides));
     float * normals = calloc(6 * patchCount * COORDS_COUNT, sizeof(*normals));
 
-	const int magic_const = 16;
+	const int magic_const = 8;
     for (int i = 0; i < patchCount; ++i) {
         radio[i].deposit.x = 0;
         radio[i].deposit.y = 0;

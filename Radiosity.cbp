@@ -32,10 +32,13 @@
 			<Add option="-O3" />
 			<Add option="-Wall" />
 			<Add option="-std=gnu99" />
+			<Add option="-mms-bitfields -fno-strict-aliasing -march=core2 -mfpmath=sse" />
+			<Add option="-fopenmp" />
 			<Add directory="D:/Dropbox/Radiosity/Radiosity/" />
 		</Compiler>
 		<Linker>
 			<Add option="-lopengl32 -lglu32 -lgdi32" />
+			<Add option="-fopenmp" />
 			<Add library="gdi32" />
 			<Add library="user32" />
 			<Add library="kernel32" />
