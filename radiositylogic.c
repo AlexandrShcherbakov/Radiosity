@@ -16,6 +16,7 @@
 #include "GL/wglext.h"
 #include "GL/glext.h"
 
+#include "../clew/clew.h"
 
 int radiosityMain() {
 	//Initializetion of polygons
@@ -24,7 +25,7 @@ int radiosityMain() {
     pt_poly = calloc(polygonCount, sizeof(*pt_poly));
     ptindoffsets = calloc(polygonCount + 1, sizeof(*pt_poly));
     ptindoffsets[0] = 0;
-    int k = 8;
+    int k = 16;
 
 	//Creation of patches
 	for (int i = 0; i < 6; ++i) {
@@ -46,9 +47,9 @@ int radiosityMain() {
 
 	//Initialization of form-factors and radiosity
     radio = calloc(patchCount, sizeof(*radio));
-    ff = calloc(patchCount, sizeof(*radio));
+    ff = calloc(patchCount, sizeof(*ff));
     for (int i = 0; i < patchCount; ++i) {
-		ff[i] = calloc(patchCount, sizeof(*radio));
+		ff[i] = calloc(patchCount, sizeof(**ff));
     }
 
 	//Read or compute form-factor
@@ -605,10 +606,10 @@ int computeRadiosity(int iterCount) {
 
 	for (int i = 0; i < patchCount; ++i)
 	{
-		radio[i].excident = radio[i].emmision;
-		radio[i].emmision.x = 0;
-		radio[i].emmision.y = 0;
-		radio[i].emmision.z = 0;
+		radio[i].excident = radio[i].emission;
+		radio[i].emission.x = 0;
+		radio[i].emission.y = 0;
+		radio[i].emission.z = 0;
 		radio[i].deposit = sum(radio[i].deposit, radio[i].excident);
 	}
 
@@ -651,22 +652,169 @@ int computeRadiosity(int iterCount) {
 }
 
 
+int computeRadiosityCL(int iterCount) {
+	char *KernelSource;
+	int sourceLen;
+
+	clewInit(L"OpenCL.dll");
+	int err;
+
+	float4 *vec_data = calloc(sizeof(*vec_data), patchCount);
+	float *ff_data = calloc(sizeof(*ff_data), patchCount * patchCount);
+
+	cl_device_id device_id;             // compute device id
+    cl_context context;                 // compute context
+    cl_command_queue commands;          // compute command queue
+    cl_program program;                 // compute program
+    cl_kernel kernel;                   // compute kernel
+
+	cl_kernel ker2;
+
+    cl_mem cl_incident;
+    cl_mem cl_excident;
+    cl_mem cl_ff;
+    cl_mem cl_reflectance;
+    cl_mem cl_emission;
+    cl_mem cl_deposit;
+
+	size_t local;
+	size_t global;
+
+
+	int platforms;
+	int platfcnt;
+
+	CHECK_CL(clGetPlatformIDs(1, &platforms, &platfcnt));
+
+    CHECK_CL(clGetDeviceIDs(platforms, CL_DEVICE_TYPE_GPU, 1, &device_id, NULL));
+
+    context = clCreateContext(0, 1, &device_id, NULL, NULL, &err);              CHECK_CL(err);
+
+    commands = clCreateCommandQueue(context, device_id, 0, &err);               CHECK_CL(err);
+
+	loadSource("kernels/kernel1", &KernelSource, &sourceLen);
+    program = clCreateProgramWithSource(context, 1, &KernelSource, NULL, &err); CHECK_CL(err);
+    CHECK_CL(clBuildProgram(program, 0, NULL, NULL, NULL, NULL));
+    kernel = clCreateKernel(program, "ker1", &err);                             CHECK_CL(err);
+
+    ker2 = clCreateKernel(program, "ker2", &err);
+
+	clock_t t_start = clock();
+	clock_t loc_st;
+	cl_incident = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(*vec_data) * patchCount, NULL, NULL);
+	cl_excident = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(*vec_data) * patchCount, NULL, NULL);
+	cl_reflectance = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(*vec_data) * patchCount, NULL, NULL);
+	cl_emission = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(*vec_data) * patchCount, NULL, NULL);
+	cl_deposit = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(*vec_data) * patchCount, NULL, NULL);
+	cl_ff = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(*ff_data) * patchCount * patchCount, NULL, NULL);
+
+	omp_set_dynamic(0);
+    omp_set_num_threads(4);
+
+	//Add excident to opencl
+	#pragma parallel for
+	for (int i = 0; i < patchCount; ++i) {
+		//Excident should be initialized by emission
+		vec_data[i].x = radio[i].emission.x;
+		vec_data[i].y = radio[i].emission.y;
+		vec_data[i].z = radio[i].emission.z;
+    }
+	CHECK_CL(clEnqueueWriteBuffer(commands, cl_excident, CL_TRUE, 0, sizeof(*vec_data) * patchCount, vec_data, 0, NULL, NULL));
+	//Add deposit to opencl
+	CHECK_CL(clEnqueueWriteBuffer(commands, cl_deposit, CL_TRUE, 0, sizeof(*vec_data) * patchCount, vec_data, 0, NULL, NULL));
+
+	//Add emission to opencl
+	#pragma parallel for
+	for (int i = 0; i < patchCount; ++i) {
+		vec_data[i].x = radio[i].reflectance.x;
+		vec_data[i].y = radio[i].reflectance.y;
+		vec_data[i].z = radio[i].reflectance.z;
+		vec_data[i].w = 0;
+    }
+	CHECK_CL(clEnqueueWriteBuffer(commands, cl_reflectance, CL_TRUE, 0, sizeof(*vec_data) * patchCount, vec_data, 0, NULL, NULL));
+
+	//Add formfactors to opencl
+	#pragma parallel for
+	for (int i = 0; i < patchCount; ++i) {
+		for (int j = 0; j < patchCount; ++j) {
+			ff_data[i * patchCount + j] = ff[i][j]; //squash formfactor matrix
+		}
+    }
+	CHECK_CL(clEnqueueWriteBuffer(commands, cl_ff, CL_TRUE, 0, sizeof(*ff_data) * patchCount * patchCount, ff_data, 0, NULL, NULL));
+
+	global = patchCount;
+
+	CHECK_CL(clSetKernelArg(kernel, 0, sizeof(cl_incident), &cl_incident));
+	CHECK_CL(clSetKernelArg(kernel, 1, sizeof(cl_excident), &cl_excident));
+	CHECK_CL(clSetKernelArg(kernel, 2, sizeof(cl_ff), &cl_ff));
+
+	CHECK_CL(clSetKernelArg(ker2, 0, sizeof(cl_incident), &cl_incident));
+	CHECK_CL(clSetKernelArg(ker2, 1, sizeof(cl_excident), &cl_excident));
+	CHECK_CL(clSetKernelArg(ker2, 2, sizeof(cl_reflectance), &cl_reflectance));
+	CHECK_CL(clSetKernelArg(ker2, 3, sizeof(cl_deposit), &cl_deposit));
+
+	loc_st = clock();
+
+	for (int iter = 0; iter < iterCount; iter++) {
+		CHECK_CL(clEnqueueNDRangeKernel(commands, kernel, 1, 0, &global, NULL, 0, NULL, NULL));
+		CHECK_CL(clEnqueueNDRangeKernel(commands, ker2, 1, 0, &global, NULL, 0, NULL, NULL));
+	}
+	clFinish(commands);
+
+	printf("Step 3 time: %f\n", (float)(clock() - loc_st) / CLOCKS_PER_SEC);
+	loc_st = clock();
+
+	//Take incident from OpenCL
+    CHECK_CL(clEnqueueReadBuffer(commands, cl_incident, CL_TRUE, 0, sizeof(*vec_data) * patchCount, vec_data, 0, NULL, NULL));
+    #pragma parallel for
+    for (int i = 0; i < patchCount; ++i) {
+        radio[i].incident.x = vec_data[i].x;
+        radio[i].incident.y = vec_data[i].y;
+        radio[i].incident.z = vec_data[i].z;
+    }
+
+    //Take excident from OpenCL
+    CHECK_CL(clEnqueueReadBuffer(commands, cl_excident, CL_TRUE, 0, sizeof(*vec_data) * patchCount, vec_data, 0, NULL, NULL));
+    #pragma parallel for
+    for (int i = 0; i < patchCount; ++i) {
+        radio[i].excident.x = vec_data[i].x;
+        radio[i].excident.y = vec_data[i].y;
+        radio[i].excident.z = vec_data[i].z;
+    }
+
+    //Take deposit from OpenCL
+    CHECK_CL(clEnqueueReadBuffer(commands, cl_deposit, CL_TRUE, 0, sizeof(*vec_data) * patchCount, vec_data, 0, NULL, NULL));
+    #pragma parallel for
+    for (int i = 0; i < patchCount; ++i) {
+        radio[i].deposit.x = vec_data[i].x;
+        radio[i].deposit.y = vec_data[i].y;
+        radio[i].deposit.z = vec_data[i].z;
+    }
+
+	free(vec_data);
+	free(ff_data);
+
+	printf("Compute radiosity time %f\n", (float)(clock() - t_start) / CLOCKS_PER_SEC);
+	return 1;
+}
+
+
 int computeRadiositySSE(int iterCount) {
     clock_t t_start = clock();
 
     __m128 srad[VECTORS_IN_RADIOSITY][patchCount];
     for (int i = 0; i < patchCount; ++i) {
-        srad[0][i] = _mm_setzero_ps();//emmision
+        srad[0][i] = _mm_setzero_ps();//emission
         srad[1][i] = _mm_set_ps(0.0f, radio[i].reflectance.x, radio[i].reflectance.y, radio[i].reflectance.z);//reflectance
         srad[2][i] = _mm_set_ps(0.0f, radio[i].incident.x, radio[i].incident.y, radio[i].incident.z);//incident
-        srad[3][i] = _mm_set_ps(0.0f, radio[i].emmision.x, radio[i].emmision.y, radio[i].emmision.z);//excident
+        srad[3][i] = _mm_set_ps(0.0f, radio[i].emission.x, radio[i].emission.y, radio[i].emission.z);//excident
         srad[4][i] = _mm_add_ps(_mm_set_ps(0.0f, radio[i].deposit.x, radio[i].deposit.y, radio[i].deposit.z), srad[3][i]);//deposit
     }
 
 
 	//Precompute
 	for (int i = 0; i < patchCount; i++) {
-		if (radio[i].emmision.x != 0) {
+		if (radio[i].emission.x != 0) {
 			for (int j = 0; j < patchCount; j++) {
                srad[2][j] = _mm_add_ps(srad[2][j], _mm_mul_ps(srad[3][i], _mm_set1_ps(ff[j][i])));
 			}
@@ -695,9 +843,9 @@ int computeRadiositySSE(int iterCount) {
     float tmp[4];
 	for (int i = 0; i < patchCount; ++i) {
         _mm_store_ps(tmp, srad[0][i]);
-        radio[i].emmision.x = tmp[2];
-        radio[i].emmision.y = tmp[1];
-        radio[i].emmision.z = tmp[0];
+        radio[i].emission.x = tmp[2];
+        radio[i].emission.y = tmp[1];
+        radio[i].emission.z = tmp[0];
         _mm_store_ps(tmp, srad[1][i]);
         radio[i].reflectance.x = tmp[2];
         radio[i].reflectance.y = tmp[1];
@@ -724,18 +872,18 @@ int drawScene(HDC hdc) {
 
 	const int magic_const = 4 * 4;
     static int light = 4;
-    radio[light].emmision.x = 0;
-    radio[light].emmision.y = 0;
-    radio[light].emmision.z = 0;
+    radio[light].emission.x = 0;
+    radio[light].emission.y = 0;
+    radio[light].emission.z = 0;
     for (int i = 0; i < patchCount; ++i) {
         radio[i].deposit.x = 0;
         radio[i].deposit.y = 0;
         radio[i].deposit.z = 0;
     }
     light = (light + 1) % magic_const + magic_const * 4;
-    radio[light].emmision.x = magic_const;
-    radio[light].emmision.y = magic_const;
-    radio[light].emmision.z = magic_const;
+    radio[light].emission.x = magic_const;
+    radio[light].emission.y = magic_const;
+    radio[light].emission.z = magic_const;
 	computeRadiosity(2);
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -854,7 +1002,7 @@ int useShaders(HDC hdc) {
 	geometryShader = glCreateShader(GL_GEOMETRY_SHADER);                         CHECK_GL_ERRORS
 
 	// загрузим вершинный шейдер
-	loadShader("shaders/vertex shader", &shaderSource, &sourceLength);           CHECK_GL_ERRORS
+	loadSource("shaders/vertex shader", &shaderSource, &sourceLength);           CHECK_GL_ERRORS
 
 	// зададим шейдеру исходный код и скомпилируем его
 	glShaderSource(vertexShader, 1, (const GLchar**)&shaderSource,
@@ -866,7 +1014,7 @@ int useShaders(HDC hdc) {
 	if (ShaderStatus(vertexShader, GL_COMPILE_STATUS) != GL_TRUE)
         printf("BUGURT!!! Line: %d\n", __LINE__);
 
-    loadShader("shaders/geometry shader", &shaderSource, &sourceLength);           CHECK_GL_ERRORS
+    loadSource("shaders/geometry shader", &shaderSource, &sourceLength);           CHECK_GL_ERRORS
 
 	// зададим шейдеру исходный код и скомпилируем его
 	glShaderSource(geometryShader, 1, (const GLchar**)&shaderSource,
@@ -879,7 +1027,7 @@ int useShaders(HDC hdc) {
         printf("BUGURT!!! Line: %d\n", __LINE__);
 
 	// загрузим фрагментный шейдер
-	loadShader("shaders/fragment shader", &shaderSource, &sourceLength);         CHECK_GL_ERRORS
+	loadSource("shaders/fragment shader", &shaderSource, &sourceLength);         CHECK_GL_ERRORS
 
 	// зададим шейдеру исходный код и скомпилируем его
 	glShaderSource(fragmentShader, 1, (const GLchar**)&shaderSource,
@@ -917,29 +1065,29 @@ int useShaders(HDC hdc) {
     float * sides = calloc(6 * patchCount * COORDS_COUNT, sizeof(*sides));
     float * normals = calloc(6 * patchCount * COORDS_COUNT, sizeof(*normals));
 
-	const int magic_const = 8;
+	const int magic_const = 16;
     for (int i = 0; i < patchCount; ++i) {
         radio[i].deposit.x = 0;
         radio[i].deposit.y = 0;
         radio[i].deposit.z = 0;
     }
 	int light = magic_const * magic_const * 4 + magic_const * magic_const / 2 + magic_const / 2;
-    radio[light].emmision.x = magic_const * magic_const / 4;
-	radio[light].emmision.y = magic_const * magic_const / 4;
-	radio[light].emmision.z = magic_const * magic_const / 4;
+    radio[light].emission.x = magic_const * magic_const / 4;
+	radio[light].emission.y = magic_const * magic_const / 4;
+	radio[light].emission.z = magic_const * magic_const / 4;
     light--;
-    radio[light].emmision.x = magic_const * magic_const / 4;
-	radio[light].emmision.y = magic_const * magic_const / 4;
-	radio[light].emmision.z = magic_const * magic_const / 4;
+    radio[light].emission.x = magic_const * magic_const / 4;
+	radio[light].emission.y = magic_const * magic_const / 4;
+	radio[light].emission.z = magic_const * magic_const / 4;
 	light -= magic_const;
-	radio[light].emmision.x = magic_const * magic_const / 4;
-	radio[light].emmision.y = magic_const * magic_const / 4;
-	radio[light].emmision.z = magic_const * magic_const / 4;
+	radio[light].emission.x = magic_const * magic_const / 4;
+	radio[light].emission.y = magic_const * magic_const / 4;
+	radio[light].emission.z = magic_const * magic_const / 4;
 	light++;
-	radio[light].emmision.x = magic_const * magic_const / 4;
-	radio[light].emmision.y = magic_const * magic_const / 4;
-	radio[light].emmision.z = magic_const * magic_const / 4;
-	computeRadiositySSE(2);
+	radio[light].emission.x = magic_const * magic_const / 4;
+	radio[light].emission.y = magic_const * magic_const / 4;
+	radio[light].emission.z = magic_const * magic_const / 4;
+	computeRadiosityCL(2);
 
     int pt = 0;
 
@@ -1078,7 +1226,7 @@ int useShaders(HDC hdc) {
 }
 
 
-int loadShader(char * shaderName, char **textOut, int *textLen) {
+int loadSource(char * shaderName, char **textOut, int *textLen) {
 	FILE *input;
 
 	input = fopen(shaderName, "r");

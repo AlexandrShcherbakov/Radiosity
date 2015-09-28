@@ -1,0 +1,22 @@
+__kernel void ker1(__global float4* incident,
+                    __global const float4* excident,
+                    __global const float* ff) {
+    int i = get_global_id(0);
+    int j;
+    int size = get_global_size(0);
+    incident[i] = (float4){0.0, 0.0, 0.0, 0.0};
+    for (j = 0; j < size; ++j) {
+		incident[i] += excident[j] * ff[i * size + j];
+    }
+}
+
+
+__kernel void ker2(__global float4* incident,
+					__global float4* excident,
+					__global float4* reflection,
+					__global float4* deposit) {
+	int i = get_global_id(0);
+	excident[i] = incident[i] * reflection[i];
+	deposit[i] += excident[i];
+}
+

@@ -9,14 +9,16 @@
 	"GL/wglext.h"
 	"GL/glext.h"
 
-1442524679 d:\dropbox\radiosity\radiosity\radiositylogic.h
+1443450611 d:\dropbox\radiosity\radiosity\radiositylogic.h
 	<windows.h>
 	<gl/gl.h>
 	<gl/glu.h>
+	<stdio.h>
 	"GL/wglext.h"
 	"GL/glext.h"
+	"../clew/clew.h"
 
-1442524565 source:d:\dropbox\radiosity\radiosity\radiositylogic.c
+1443455141 source:d:\dropbox\radiosity\radiosity\radiositylogic.c
 	"radiositylogic.h"
 	<stdio.h>
 	<stdlib.h>
@@ -30,6 +32,7 @@
 	<gl/glu.h>
 	"GL/wglext.h"
 	"GL/glext.h"
+	"../clew/clew.h"
 
 1440178109 d:\dropbox\radiosity\radiosity\gl\wglext.h
 	<windows.h>
@@ -66,4 +69,49 @@
 	<Availability.h>
 	<OpenGL/glu.h>
 	<GL/glu.h>
+
+1443258728 d:\dropbox\radiosity\radiosity\cl\clew.h
+	<AvailabilityMacros.h>
+	<stdint.h>
+	<stddef.h>
+	<altivec.h>
+	<intrin.h>
+	<xmmintrin.h>
+	<intrin.h>
+	<emmintrin.h>
+	<mmintrin.h>
+	<intrin.h>
+	<immintrin.h>
+
+1443118835 source:d:\dropbox\radiosity\radiosity\cl\clew.c
+	"clew.h"
+	<windows.h>
+	<dlfcn.h>
+	<stdlib.h>
+
+1443250647 d:\dropbox\radiosity\radiosity\cl\myclew.h
+	<AvailabilityMacros.h>
+	<stdint.h>
+	<stddef.h>
+	<altivec.h>
+	<intrin.h>
+	<xmmintrin.h>
+	<intrin.h>
+	<emmintrin.h>
+	<mmintrin.h>
+	<intrin.h>
+	<immintrin.h>
+
+1426423713 d:\dropbox\radiosity\clew\clew.h
+	<AvailabilityMacros.h>
+	<stdint.h>
+	<stddef.h>
+	<altivec.h>
+	<intrin.h>
+	<xmmintrin.h>
+	<intrin.h>
+	<emmintrin.h>
+	<mmintrin.h>
+	<intrin.h>
+	<immintrin.h>
 
