@@ -20,9 +20,9 @@
 					<Add option="-lclew" />
 					<Add library="user32" />
 					<Add library="gdi32" />
+					<Add library="..\clew\bin\Debug\libclew.a" />
 					<Add library="kernel32" />
 					<Add library="comctl32" />
-					<Add library="..\clew\bin\Debug\libclew.a" />
 				</Linker>
 			</Target>
 			<Target title="Release">

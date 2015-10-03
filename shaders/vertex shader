@@ -3,11 +3,11 @@
 uniform mat4 projectionMatrix;
 
 in vec3 position;
-in vec3 color;
+in vec4 color;
 in vec3 side;
 in vec3 normal;
 
-out vec3 geometryColor;
+out vec4 geometryColor;
 out vec4 A;
 out vec4 B;
 out vec4 C;
@@ -27,5 +27,5 @@ void main(void)
         C = projectionMatrix * vec4(pnt, 1.0);
         D = projectionMatrix * vec4(pnt + sd, 1.0);
 
-        geometryColor = color;
+        geometryColor = pow(color, vec4(1.0 / 2.2));
 }

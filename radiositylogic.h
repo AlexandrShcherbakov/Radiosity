@@ -254,6 +254,13 @@ static int patchCount;
 ///Array of offsets for index of patch
 static int *ptindoffsets;
 
+///Arrays of radiosity
+static float4 *emission;
+static float4 *excident;
+static float4 *incident;
+static float4 *reflectance;
+static float4 *deposit;
+
 #ifdef __cplusplus
 }
 #endif
@@ -392,7 +399,7 @@ void checkCLFun(cl_int cErr, char* file, int line)
   if (cErr != CL_SUCCESS)
   {
     const char* err = getOpenCLErrorString(cErr);
-    fprintf(stderr, err);
+    fprintf(stderr, "%s line: %d\n", err, line);
   }
 }
 

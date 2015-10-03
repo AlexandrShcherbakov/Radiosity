@@ -3,13 +3,13 @@
 layout(points) in;
 layout(triangle_strip, max_vertices = 4) out;
 
-in vec3 geometryColor[];
+in vec4 geometryColor[];
 in vec4 A[];
 in vec4 B[];
 in vec4 C[];
 in vec4 D[];
 
-out vec3 fragmentColor;
+out vec4 fragmentColor;
 
 void main(void) {
     fragmentColor = geometryColor[0];
