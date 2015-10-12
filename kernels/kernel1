@@ -1,12 +1,13 @@
-__kernel void ker1(__global float4* incident,
-                    __global float4* excident,
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+
+__kernel void ker1(__global float4* excident,
                     __global const float* ff,
                     __global float4* reflection,
                     __global float4* deposit) {
     int i = get_global_id(0);
     int j;
     int size = get_global_size(0);
-    float4 inc = (float4){0.0, 0.0, 0.0, 0.0};
+    float4 inc = {0.0f, 0.0f, 0.0f, 0.0f};
     for (j = 0; j < size; j += 4) {
 		int it = i * size + j;
         inc += excident[j + 0] * ff[it + 0];
@@ -14,18 +15,61 @@ __kernel void ker1(__global float4* incident,
         inc += excident[j + 2] * ff[it + 2];
         inc += excident[j + 3] * ff[it + 3];
     }
-    incident[i] = inc;
-    excident[i] = incident[i] * reflection[i];
-	deposit[i] += excident[i];
+    inc = inc * reflection[i];
+    excident[i] = inc;
+	deposit[i] += inc;
 }
 
-
-__kernel void ker2(__global float4* incident,
-					__global float4* excident,
-					__global float4* reflection,
-					__global float4* deposit) {
-	int i = get_global_id(0);
-	excident[i] = incident[i] * reflection[i];
-	deposit[i] += excident[i];
+__kernel void ROFloatArraysToHalf(__global float4 *reflectance,
+                                    __global float * ff,
+                                    __global half *hreflectance,
+                                    __global half * hff) {
+    int i = get_global_id(0);
+    vstore_half4(reflectance[i], i, hreflectance);
+    int j;
+    int size = get_global_size(0);
+    for (j = 0; j < size; ++j) {
+        vstore_half(ff[i * size + j], i * size + j, hff);
+    }
 }
 
+__kernel void RWFloatArraysToHalf(__global float4 * excident,
+                                    __global half *hexcident,
+                                    __global half *hdeposit) {
+    int i = get_global_id(0);
+    float4 exc = excident[i];
+    vstore_half4(exc, i, hexcident);
+    vstore_half4(exc, i, hdeposit);
+}
+
+__kernel void Step1(__global half* excident,
+                    __global half* ff,
+                    __global half* reflection,
+                    __global half* incident) {
+    int i = get_global_id(0);
+    int j;
+    int size = get_global_size(0);
+    float4 inc = {0.0f, 0.0f, 0.0f, 0.0f};
+    float16 exc;
+    float4 f;
+    for (j = 0; j < size; j += 4) {
+		int it = i * size + j;
+		exc = vload_half16(j / 4, excident);
+		f = vload_half4(it / 4, ff);
+		inc += (float4){exc[0], exc[1], exc[2], exc[3]} * f.x;
+		inc += (float4){exc[4], exc[5], exc[6], exc[7]} * f.y;
+		inc += (float4){exc[8], exc[9], exc[10], exc[11]} * f.z;
+		inc += (float4){exc[12], exc[13], exc[14], exc[15]} * f.w;
+    }
+    inc = inc * vload_half4(i, reflection);
+    vstore_half4(inc, i, incident);
+}
+
+__kernel void Step2(__global half* incident,
+                    __global half* excident,
+                    __global half* deposit) {
+    int i = get_global_id(0);
+    float4 inc = vload_half4(i, incident);
+    vstore_half4(inc, i, excident);
+    vstore_half4(inc + vload_half4(i, deposit), i, deposit);
+}

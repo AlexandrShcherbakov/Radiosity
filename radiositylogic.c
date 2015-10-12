@@ -22,6 +22,9 @@
 #include <string.h>
 
 int radiosityMain() {
+    omp_set_dynamic(0);
+    omp_set_num_threads(4);
+
 	//Initializetion of polygons
 	polygonCount = 18;
     poly = hardcodedPolygons();
@@ -53,7 +56,7 @@ int radiosityMain() {
 
     emission = calloc(patchCount, sizeof(*emission));
     excident = calloc(patchCount, sizeof(*excident));
-    incident = calloc(patchCount, sizeof(*incident));
+    //incident = calloc(patchCount, sizeof(*incident));
     reflectance = calloc(patchCount, sizeof(*reflectance));
     deposit = calloc(patchCount, sizeof(*deposit));
 
@@ -661,73 +664,43 @@ int computeRadiosity(int iterCount) {
 	return 1;
 }
 
-
-int computeRadiosityCL(int iterCount, GLuint gl_buf, cl_context context, cl_device_id device_id) {
-	char *KernelSource;
+void prepareRadiosityCL(GLuint gl_buf, cl_context context, cl_device_id device_id) {
+    char *KernelSource;
 	int sourceLen;
 
 	int err;
 
-	float4 *vec_data = calloc(sizeof(*vec_data), patchCount);
-	float *ff_data = calloc(sizeof(*ff_data), patchCount * patchCount);
-
-
-    cl_command_queue commands;          // compute command queue
-    cl_program program;                 // compute program
-    cl_kernel kernel;                   // compute kernel
-
-	cl_kernel ker2;
-
-    cl_mem cl_incident;
-    cl_mem cl_excident;
-    cl_mem cl_ff;
-    cl_mem cl_reflectance;
-    cl_mem cl_emission;
-    cl_mem cl_deposit;
-
-	size_t local;
-	size_t global;
-
+	vec_data = calloc(sizeof(*vec_data), patchCount);
+	ff_data = calloc(sizeof(*ff_data), patchCount * patchCount);
+	cl_program program;
     commands = clCreateCommandQueue(context, device_id, 0, &err);               CHECK_CL(err);
-
-	loadSource("kernels/kernel1", &KernelSource, &sourceLen);
+    loadSource("kernels/kernel1", &KernelSource, &sourceLen);
     program = clCreateProgramWithSource(context, 1, &KernelSource, NULL, &err); CHECK_CL(err);
-    CHECK_CL(clBuildProgram(program, 0, NULL, NULL, NULL, NULL));
-    kernel = clCreateKernel(program, "ker1", &err);                             CHECK_CL(err);
-
-    ker2 = clCreateKernel(program, "ker2", &err);
-
-	clock_t t_start = clock();
-	clock_t loc_st;
-	cl_incident = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(*incident) * patchCount, NULL, &err); CHECK_CL(err);
-	cl_excident = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(*excident) * patchCount, NULL, &err); CHECK_CL(err);
-	cl_reflectance = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(*reflectance) * patchCount, NULL, &err); CHECK_CL(err);
-	cl_emission = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(*emission) * patchCount, NULL, &err); CHECK_CL(err);
-	//cl_deposit = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(*deposit) * patchCount, NULL, NULL);
-	cl_deposit = clCreateFromGLBuffer(context, CL_MEM_READ_WRITE, gl_buf, &err); CHECK_CL(err);
-	cl_ff = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(*ff_data) * patchCount * patchCount, NULL, &err); CHECK_CL(err);
-
-    CHECK_CL(clEnqueueAcquireGLObjects(commands, 1, &cl_deposit, 0, 0, 0));
-
-	//printf("Step 1 time: %f\n", (float)(clock() - loc_st) / CLOCKS_PER_SEC);
-	//loc_st = clock();
-
-	omp_set_dynamic(0);
-    omp_set_num_threads(4);
-
-	//Add excident to opencl
-	#pragma parallel for
-	for (int i = 0; i < patchCount; ++i) {
-		//Excident should be initialized by emission
-		vec_data[i].x = radio[i].emission.x;
-		vec_data[i].y = radio[i].emission.y;
-		vec_data[i].z = radio[i].emission.z;
+    CHECK_CL(err = clBuildProgram(program, 0, NULL, NULL, NULL, NULL));
+    if (err == CL_BUILD_PROGRAM_FAILURE) {
+        size_t log_size;
+        clGetProgramBuildInfo(program, device_id, CL_PROGRAM_BUILD_LOG, 0, NULL, &log_size);
+        char *log = (char *) malloc(log_size);
+        clGetProgramBuildInfo(program, device_id, CL_PROGRAM_BUILD_LOG, log_size, log, NULL);
+        printf("%s\n", log);
     }
-    CHECK_CL(clEnqueueWriteBuffer(commands, cl_excident, CL_TRUE, 0, sizeof(*vec_data) * patchCount, vec_data, 0, NULL, NULL));
-	//CHECK_CL(clEnqueueWriteBuffer(commands, cl_excident, CL_TRUE, 0, sizeof(*emission) * patchCount, emission, 0, NULL, NULL));
-	//Add deposit to opencl
-	//CHECK_CL(clEnqueueWriteBuffer(commands, cl_deposit, CL_TRUE, 0, sizeof(*emission) * patchCount, emission, 0, NULL, NULL));
-	CHECK_CL(clEnqueueWriteBuffer(commands, cl_deposit, CL_TRUE, 0, sizeof(*vec_data) * patchCount, vec_data, 0, NULL, NULL));
+    //kernel = clCreateKernel(program, "ker1", &err);                             CHECK_CL(err);
+    Step1Kernel = clCreateKernel(program, "Step1", &err);           CHECK_CL(err);
+    Step2Kernel = clCreateKernel(program, "Step2", &err);           CHECK_CL(err);
+    loadConstsKernel = clCreateKernel(program, "ROFloatArraysToHalf", &err);    CHECK_CL(err);
+    loadDataKernel = clCreateKernel(program, "RWFloatArraysToHalf", &err);      CHECK_CL(err);
+    //cl_incident = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(*incident) * patchCount, NULL, &err); CHECK_CL(err);
+	cl_excident = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(*excident) * patchCount, NULL, &err); CHECK_CL(err);
+	cl_reflectance = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(*reflectance) * patchCount, NULL, &err); CHECK_CL(err);
+	//cl_emission = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(*emission) * patchCount, NULL, &err); CHECK_CL(err);
+	//cl_deposit = clCreateFromGLBuffer(context, CL_MEM_READ_WRITE, gl_buf, &err); CHECK_CL(err);
+	cl_deposit = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(*deposit) * patchCount, NULL, &err); CHECK_CL(err);
+	cl_ff = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(*ff_data) * patchCount * patchCount, NULL, &err); CHECK_CL(err);
+	half_excident = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(*excident) * patchCount / 2, NULL, &err); CHECK_CL(err);
+    half_reflectance = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(*reflectance) * patchCount / 2, NULL, &err); CHECK_CL(err);
+	half_deposit = clCreateFromGLBuffer(context, CL_MEM_READ_WRITE, gl_buf, &err); CHECK_CL(err);
+	half_ff = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(*ff_data) * patchCount * patchCount / 2, NULL, &err); CHECK_CL(err);
+	half_incident = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(*excident) * patchCount / 2, NULL, &err); CHECK_CL(err);
 
 	//Add emission to opencl
 	#pragma parallel for
@@ -737,7 +710,6 @@ int computeRadiosityCL(int iterCount, GLuint gl_buf, cl_context context, cl_devi
 		vec_data[i].z = radio[i].reflectance.z;
 		vec_data[i].w = 0;
     }
-	//CHECK_CL(clEnqueueWriteBuffer(commands, cl_reflectance, CL_TRUE, 0, sizeof(*reflectance) * patchCount, reflectance, 0, NULL, NULL));
 	CHECK_CL(clEnqueueWriteBuffer(commands, cl_reflectance, CL_TRUE, 0, sizeof(*vec_data) * patchCount, vec_data, 0, NULL, NULL));
 
 	//Add formfactors to opencl
@@ -749,71 +721,59 @@ int computeRadiosityCL(int iterCount, GLuint gl_buf, cl_context context, cl_devi
     }
 	CHECK_CL(clEnqueueWriteBuffer(commands, cl_ff, CL_TRUE, 0, sizeof(*ff_data) * patchCount * patchCount, ff_data, 0, NULL, NULL));
 
-	//printf("Step 2 time: %f\n", (float)(clock() - loc_st) / CLOCKS_PER_SEC);
-	//loc_st = clock();
+	//CHECK_CL(clSetKernelArg(kernel, 0, sizeof(cl_incident), &cl_incident));
+	/*CHECK_CL(clSetKernelArg(kernel, 0, sizeof(cl_excident), &cl_excident));
+	CHECK_CL(clSetKernelArg(kernel, 1, sizeof(cl_ff), &cl_ff));
+	CHECK_CL(clSetKernelArg(kernel, 2, sizeof(cl_reflectance), &cl_reflectance));
+	CHECK_CL(clSetKernelArg(kernel, 3, sizeof(cl_deposit), &cl_deposit));*/
+	///Upload half data
+	CHECK_CL(clSetKernelArg(loadConstsKernel, 0, sizeof(cl_reflectance), &cl_reflectance));
+	CHECK_CL(clSetKernelArg(loadConstsKernel, 1, sizeof(cl_ff), &cl_ff));
+	CHECK_CL(clSetKernelArg(loadConstsKernel, 2, sizeof(half_reflectance), &half_reflectance));
+	CHECK_CL(clSetKernelArg(loadConstsKernel, 3, sizeof(half_ff), &half_ff));
+	CHECK_CL(clEnqueueNDRangeKernel(commands, loadConstsKernel, 1, 0, &patchCount, NULL, 0, NULL, NULL));
+	CHECK_CL(clFinish(commands));
+	///Set args for loadDataKernel
+	CHECK_CL(clSetKernelArg(loadDataKernel, 0, sizeof(cl_excident), &cl_excident));
+	CHECK_CL(clSetKernelArg(loadDataKernel, 1, sizeof(half_excident), &half_excident));
+	CHECK_CL(clSetKernelArg(loadDataKernel, 2, sizeof(half_deposit), &half_deposit));
+	///Set args for Step1Kernel
+    CHECK_CL(clSetKernelArg(Step1Kernel, 0, sizeof(half_excident), &half_excident));
+	CHECK_CL(clSetKernelArg(Step1Kernel, 1, sizeof(half_ff), &half_ff));
+	CHECK_CL(clSetKernelArg(Step1Kernel, 2, sizeof(half_reflectance), &half_reflectance));
+	CHECK_CL(clSetKernelArg(Step1Kernel, 3, sizeof(half_incident), &half_incident));
+    ///Set args for Step2Kernel
+    CHECK_CL(clSetKernelArg(Step2Kernel, 0, sizeof(half_incident), &half_incident));
+    CHECK_CL(clSetKernelArg(Step2Kernel, 1, sizeof(half_excident), &half_excident));
+	CHECK_CL(clSetKernelArg(Step2Kernel, 2, sizeof(half_deposit), &half_deposit));
+}
 
-	global = patchCount;
 
-	CHECK_CL(clSetKernelArg(kernel, 0, sizeof(cl_incident), &cl_incident));
-	CHECK_CL(clSetKernelArg(kernel, 1, sizeof(cl_excident), &cl_excident));
-	CHECK_CL(clSetKernelArg(kernel, 2, sizeof(cl_ff), &cl_ff));
-	CHECK_CL(clSetKernelArg(kernel, 3, sizeof(cl_reflectance), &cl_reflectance));
-	CHECK_CL(clSetKernelArg(kernel, 4, sizeof(cl_deposit), &cl_deposit));
+int computeRadiosityCL(int iterCount) {
+    CHECK_CL(clEnqueueAcquireGLObjects(commands, 1, &half_deposit, 0, 0, 0));
 
-	/*CHECK_CL(clSetKernelArg(ker2, 0, sizeof(cl_incident), &cl_incident));
-	CHECK_CL(clSetKernelArg(ker2, 1, sizeof(cl_excident), &cl_excident));
-	CHECK_CL(clSetKernelArg(ker2, 2, sizeof(cl_reflectance), &cl_reflectance));
-	CHECK_CL(clSetKernelArg(ker2, 3, sizeof(cl_deposit), &cl_deposit));*/
-
-	//printf("Step 3 time: %f\n", (float)(clock() - loc_st) / CLOCKS_PER_SEC);
-	loc_st = clock();
-
+	//Add excident to opencl
+	#pragma parallel for
+	for (int i = 0; i < patchCount; ++i) {
+		//Excident should be initialized by emission
+		vec_data[i].x = radio[i].emission.x;
+		vec_data[i].y = radio[i].emission.y;
+		vec_data[i].z = radio[i].emission.z;
+    }
+    CHECK_CL(clEnqueueWriteBuffer(commands, cl_excident, CL_TRUE, 0, sizeof(*vec_data) * patchCount, vec_data, 0, NULL, NULL));
+	//Add deposit to opencl
+	//CHECK_CL(clEnqueueWriteBuffer(commands, cl_deposit, CL_TRUE, 0, sizeof(*vec_data) * patchCount, vec_data, 0, NULL, NULL));
+    CHECK_CL(clEnqueueNDRangeKernel(commands, loadDataKernel, 1, 0, &patchCount, NULL, 0, NULL, NULL));
+    CHECK_CL(clFinish(commands));
 	for (int iter = 0; iter < iterCount; iter++) {
-		CHECK_CL(clEnqueueNDRangeKernel(commands, kernel, 1, 0, &global, NULL, 0, NULL, NULL));
-		//CHECK_CL(clEnqueueNDRangeKernel(commands, ker2, 1, 0, &global, NULL, 0, NULL, NULL));
+		CHECK_CL(clEnqueueNDRangeKernel(commands, Step1Kernel, 1, 0, &patchCount, NULL, 0, NULL, NULL));
+		//CHECK_CL(clFinish(commands));
+		CHECK_CL(clEnqueueNDRangeKernel(commands, Step2Kernel, 1, 0, &patchCount, NULL, 0, NULL, NULL));
+		CHECK_CL(clFinish(commands));
 	}
-	clFinish(commands);
+	CHECK_CL(clFinish(commands));
 
-	printf("Step 4 time: %f\n", (float)(clock() - loc_st) / CLOCKS_PER_SEC);
-
-	CHECK_CL(clEnqueueReleaseGLObjects(commands, 1, &cl_deposit, 0, 0, 0));
-	//loc_st = clock();
-
-	//Take incident from OpenCL
-    /*CHECK_CL(clEnqueueReadBuffer(commands, cl_incident, CL_TRUE, 0, sizeof(*vec_data) * patchCount, vec_data, 0, NULL, NULL));
-    #pragma parallel for
-    for (int i = 0; i < patchCount; ++i) {
-        radio[i].incident.x = vec_data[i].x;
-        radio[i].incident.y = vec_data[i].y;
-        radio[i].incident.z = vec_data[i].z;
-    }*/
-
-    //Take excident from OpenCL
-	//CHECK_CL(clEnqueueReadBuffer(commands, cl_excident, CL_TRUE, 0, sizeof(*excident) * patchCount, excident, 0, NULL, NULL));
-	/*CHECK_CL(clEnqueueReadBuffer(commands, cl_excident, CL_TRUE, 0, sizeof(*vec_data) * patchCount, vec_data, 0, NULL, NULL));
-    #pragma parallel for
-    for (int i = 0; i < patchCount; ++i) {
-        radio[i].excident.x = vec_data[i].x;
-        radio[i].excident.y = vec_data[i].y;
-        radio[i].excident.z = vec_data[i].z;
-    }*/
-
-    //Take deposit from OpenCL
-    //CHECK_CL(clEnqueueReadBuffer(commands, cl_deposit, CL_TRUE, 0, sizeof(*deposit) * patchCount, deposit, 0, NULL, NULL));
-    //CHECK_CL(clEnqueueReadBuffer(commands, cl_deposit, CL_TRUE, 0, sizeof(*vec_data) * patchCount, vec_data, 0, NULL, NULL));
-    /*#pragma parallel for
-    for (int i = 0; i < patchCount; ++i) {
-        radio[i].deposit.x = vec_data[i].x;
-        radio[i].deposit.y = vec_data[i].y;
-        radio[i].deposit.z = vec_data[i].z;
-    }*/
-
-	free(vec_data);
-	free(ff_data);
-
-	//printf("Step 5 time: %f\n", (float)(clock() - loc_st) / CLOCKS_PER_SEC);
-
-	printf("Compute radiosity time %f\n", (float)(clock() - t_start) / CLOCKS_PER_SEC);
+	CHECK_CL(clEnqueueReleaseGLObjects(commands, 1, &half_deposit, 0, 0, 0));
 	return 1;
 }
 
@@ -1007,8 +967,6 @@ int useShaders(HDC hdc) {
 	OPENGL_GET_PROC(PFNGLVALIDATEPROGRAMPROC, glValidateProgram)
 
 	GLuint vertexShader, fragmentShader, geometryShader;
-	GLuint shaderProgram;
-	GLuint meshVAO;
 
 	// переменные для хранения загруженных файлов
 	char *shaderSource;
@@ -1071,46 +1029,12 @@ int useShaders(HDC hdc) {
 	// сделаем шейдерную программу активной
 	glUseProgram(shaderProgram);                                                 CHECK_GL_ERRORS
 
-
-
-	//Set geometry
-	GLuint meshVBO;
-	GLuint meshVBO2;
-	glGenVertexArrays(1, &meshVAO);                                              CHECK_GL_ERRORS
+    glGenVertexArrays(1, &meshVAO);                                              CHECK_GL_ERRORS
 	glBindVertexArray(meshVAO);                                                  CHECK_GL_ERRORS
 
-    float * colors = calloc(6 * patchCount * COLOR_COUNT, sizeof(*colors));
-    float * coords = calloc(6 * patchCount * COORDS_COUNT, sizeof(*coords));
-    float * sides = calloc(6 * patchCount * COORDS_COUNT, sizeof(*sides));
-    float * normals = calloc(6 * patchCount * COORDS_COUNT, sizeof(*normals));
-
-	const int magic_const = 16;
-    for (int i = 0; i < patchCount; ++i) {
-		//deposit[i].x = deposit[i].y = deposit[i].z = 0;
-        radio[i].deposit.x = 0;
-        radio[i].deposit.y = 0;
-        radio[i].deposit.z = 0;
-    }
-	int light = magic_const * magic_const * 4 + magic_const * magic_const / 2 + magic_const / 2;
-    radio[light].emission.x = magic_const * magic_const / 4;
-	radio[light].emission.y = magic_const * magic_const / 4;
-	radio[light].emission.z = magic_const * magic_const / 4;
-	//emission[light].x = emission[light].y = emission[light].z = magic_const * magic_const / 4;
-    light--;
-    radio[light].emission.x = magic_const * magic_const / 4;
-	radio[light].emission.y = magic_const * magic_const / 4;
-	radio[light].emission.z = magic_const * magic_const / 4;
-	//emission[light].x = emission[light].y = emission[light].z = magic_const * magic_const / 4;
-	light -= magic_const;
-	radio[light].emission.x = magic_const * magic_const / 4;
-	radio[light].emission.y = magic_const * magic_const / 4;
-	radio[light].emission.z = magic_const * magic_const / 4;
-	//emission[light].x = emission[light].y = emission[light].z = magic_const * magic_const / 4;
-	light++;
-	radio[light].emission.x = magic_const * magic_const / 4;
-	radio[light].emission.y = magic_const * magic_const / 4;
-	radio[light].emission.z = magic_const * magic_const / 4;
-	//emission[light].x = emission[light].y = emission[light].z = magic_const * magic_const / 4;
+    coords = calloc(6 * patchCount * COORDS_COUNT, sizeof(*coords));
+    sides = calloc(6 * patchCount * COORDS_COUNT, sizeof(*sides));
+    normals = calloc(6 * patchCount * COORDS_COUNT, sizeof(*normals));
 
     cl_device_id device_id;             // compute device id
     cl_context context;                 // compute context
@@ -1118,12 +1042,10 @@ int useShaders(HDC hdc) {
 	int platfcnt;
     int err;
 
-
     CHECK_CL(clGetPlatformIDs(30, platforms, &platfcnt));
 
     CHECK_CL(clGetDeviceIDs(platforms[0], CL_DEVICE_TYPE_GPU, 1, &device_id, NULL));
 
-    //context = clCreateContext(0, 1, &device_id, NULL, NULL, &err);              CHECK_CL(err);
     cl_context_properties properties[] = {
     CL_GL_CONTEXT_KHR, (cl_context_properties)wglGetCurrentContext(), // WGL Context
     CL_WGL_HDC_KHR, (cl_context_properties)wglGetCurrentDC(), // WGL HDC
@@ -1131,131 +1053,15 @@ int useShaders(HDC hdc) {
     0 };
     // Create a context using the supported devices
     context = clCreateContext(properties, 1, &device_id, NULL, 0, &err); CHECK_CL(err);
-    printf("OK\n");
 
-    GLuint gl_color_buf;
 	glGenBuffers(1, &gl_color_buf);                                             CHECK_GL_ERRORS
 	glBindBuffer(GL_ARRAY_BUFFER, gl_color_buf);                                CHECK_GL_ERRORS
-	glBufferData(GL_ARRAY_BUFFER, patchCount * sizeof(float4), 0, GL_STATIC_DRAW); CHECK_GL_ERRORS
+	glBufferData(GL_ARRAY_BUFFER, patchCount * sizeof(float4) / 2, 0, GL_STATIC_DRAW); CHECK_GL_ERRORS
 
-    //glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-	computeRadiosityCL(2, gl_color_buf, context, device_id);
-
-    glBindBuffer(GL_ARRAY_BUFFER_ARB, gl_color_buf);
-
-	int vertexOffsetPosition = 0;
-	int vertexOffsetColor = 0;
-	GLint positionLocation, colorLocation, sideLocation, normalsLocation;
-
-    colorLocation = glGetAttribLocation(shaderProgram, "color");                 CHECK_GL_ERRORS
-	if (colorLocation != -1)
-	{
-			glVertexAttribPointer(colorLocation, 4, GL_FLOAT, GL_FALSE, sizeof(float4),
-                         (const GLvoid*)vertexOffsetColor);                      CHECK_GL_ERRORS
-			glEnableVertexAttribArray(colorLocation);                            CHECK_GL_ERRORS
-	}
-
-    int pt = 0;
-
-    for (int i = 0; i < polygonCount; ++i) {
-		//if (i == 5) continue;
-		for (int i1 = 0; i1 < pt_poly[i].axis1; ++i1) {
-			for (int j1 = 0; j1 < pt_poly[i].axis2; ++j1) {
-                if (i != 5) {
-                    int pt_ind = ptindoffsets[i] + pt_poly[i].axis2 * i1 + j1;
-                    point ct = pt_poly[i].patches[i1][j1].vertex[0];
-                    /*colors[pt * COLOR_COUNT] = (float)pow(radio[pt_ind].deposit.x,
-                                                             1.0 / 2);
-                    colors[pt * COLOR_COUNT + 1] = (float)pow(radio[pt_ind].deposit.y,
-                                                             1.0 / 2);
-                    colors[pt * COLOR_COUNT + 2] = (float)pow(radio[pt_ind].deposit.z,
-                                                             1.0 / 2);*/
-                    /*colors[pt * COLOR_COUNT] = (float)pow(deposit[pt_ind].x, 1.0 / 2);
-                    colors[pt * COLOR_COUNT + 1] = (float)pow(deposit[pt_ind].y, 1.0 / 2);
-                    colors[pt * COLOR_COUNT + 2] = (float)pow(deposit[pt_ind].z, 1.0 / 2);*/
-                    coords[pt * COORDS_COUNT] = (float)ct.y;
-                    coords[pt * COORDS_COUNT + 1] = (float)ct.z;
-                    coords[pt * COORDS_COUNT + 2] = (float)ct.x - 3.0f;
-                    point side = sub(pt_poly[i].patches[i1][j1].vertex[1],
-                                     pt_poly[i].patches[i1][j1].vertex[0]);
-                    //printf("%f %f %f\n", side.x, side.y, side.z);
-                    sides[pt * COORDS_COUNT] = (float)side.y;
-                    sides[pt * COORDS_COUNT + 1] = (float)side.z;
-                    sides[pt * COORDS_COUNT + 2] = (float)side.x;
-                    normals[pt * COORDS_COUNT] = (float)poly[i].normal.y;
-                    normals[pt * COORDS_COUNT + 1] = (float)poly[i].normal.z;
-                    normals[pt * COORDS_COUNT + 2] = (float)poly[i].normal.x;
-                }
-                pt++;
-			}
-        }
-    }
-
-    glGenBuffers(2, &meshVBO);                                                   CHECK_GL_ERRORS
-	glBindBuffer(GL_ARRAY_BUFFER, meshVBO);                                      CHECK_GL_ERRORS
-    glBufferData(GL_ARRAY_BUFFER, pt * sizeof(*coords) * COORDS_COUNT, coords,
-                 GL_STATIC_DRAW);                                                CHECK_GL_ERRORS
-
-
-	positionLocation = glGetAttribLocation(shaderProgram, "position");           CHECK_GL_ERRORS
-	if (positionLocation != -1)
-	{
-			glVertexAttribPointer(positionLocation, 3, GL_FLOAT, GL_FALSE,
-					sizeof(*coords) * COORDS_COUNT,
-                         (const GLvoid*)vertexOffsetPosition);                   CHECK_GL_ERRORS
-			glEnableVertexAttribArray(positionLocation);                         CHECK_GL_ERRORS
-	}
-
-	/*glGenBuffers(2, &meshVBO2);                                                  CHECK_GL_ERRORS
-	glBindBuffer(GL_ARRAY_BUFFER, meshVBO2);                                     CHECK_GL_ERRORS
-    glBufferData(GL_ARRAY_BUFFER, pt * sizeof(*colors) * COLOR_COUNT, colors,
-                 GL_STATIC_DRAW);                                                CHECK_GL_ERRORS
-
-
-	colorLocation = glGetAttribLocation(shaderProgram, "color");                 CHECK_GL_ERRORS
-	if (colorLocation != -1)
-	{
-			glVertexAttribPointer(colorLocation, 3, GL_FLOAT, GL_FALSE,
-					sizeof(*colors) * COLOR_COUNT,
-                         (const GLvoid*)vertexOffsetColor);                      CHECK_GL_ERRORS
-			glEnableVertexAttribArray(colorLocation);                            CHECK_GL_ERRORS
-	}*/
-
-	glGenBuffers(3, &meshVBO);                                                   CHECK_GL_ERRORS
-	glBindBuffer(GL_ARRAY_BUFFER, meshVBO);                                      CHECK_GL_ERRORS
-    glBufferData(GL_ARRAY_BUFFER, pt * sizeof(*sides) * COORDS_COUNT, sides,
-                 GL_STATIC_DRAW);                                                CHECK_GL_ERRORS
-
-
-	sideLocation = glGetAttribLocation(shaderProgram, "side");                   CHECK_GL_ERRORS
-	if (sideLocation != -1)
-	{
-			glVertexAttribPointer(sideLocation, 3, GL_FLOAT, GL_FALSE,
-					sizeof(*sides) * COORDS_COUNT, (const GLvoid*)0);            CHECK_GL_ERRORS
-			glEnableVertexAttribArray(sideLocation);                             CHECK_GL_ERRORS
-	}
-
-	glGenBuffers(4, &meshVBO);                                                   CHECK_GL_ERRORS
-	glBindBuffer(GL_ARRAY_BUFFER, meshVBO);                                      CHECK_GL_ERRORS
-    glBufferData(GL_ARRAY_BUFFER, pt * sizeof(*normals) * COORDS_COUNT, normals,
-                 GL_STATIC_DRAW);                                                CHECK_GL_ERRORS
-
-
-	normalsLocation = glGetAttribLocation(shaderProgram, "normal");              CHECK_GL_ERRORS
-	if (normalsLocation != -1)
-	{
-			glVertexAttribPointer(normalsLocation, 3, GL_FLOAT, GL_FALSE,
-					sizeof(*normals) * COORDS_COUNT, (const GLvoid*)0);          CHECK_GL_ERRORS
-			glEnableVertexAttribArray(normalsLocation);                         CHECK_GL_ERRORS
-	}
-
-    free(colors);
-    free(coords);
-    free(sides);
-    free(normals);
-
-
+	prepareRadiosityCL(gl_color_buf, context, device_id);
+	glGenBuffers(2, &gl_coords);                                                CHECK_GL_ERRORS
+	glGenBuffers(3, &gl_sides);                                                 CHECK_GL_ERRORS
+	glGenBuffers(4, &gl_normals);                                               CHECK_GL_ERRORS
 
 	//Set uniforms
 	// массив для хранения перспективной матрици проекции
@@ -1278,8 +1084,119 @@ int useShaders(HDC hdc) {
 	if (projectionMatrixLocation != -1)
 		glUniformMatrix4fv(projectionMatrixLocation, 1, GL_TRUE, projectionMatrix);CHECK_GL_ERRORS
 
+}
 
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);                          CHECK_GL_ERRORS
+
+void justDraw(HDC hdc) {
+    //Set geometry
+	const int magic_const = 16;
+    for (int i = 0; i < patchCount; ++i) {
+        radio[i].deposit.x = 0;
+        radio[i].deposit.y = 0;
+        radio[i].deposit.z = 0;
+    }
+	int light = magic_const * magic_const * 4 + magic_const * magic_const / 2 + magic_const / 2;
+    radio[light].emission.x = magic_const * magic_const / 4;
+	radio[light].emission.y = magic_const * magic_const / 4;
+	radio[light].emission.z = magic_const * magic_const / 4;
+    light--;
+    radio[light].emission.x = magic_const * magic_const / 4;
+	radio[light].emission.y = magic_const * magic_const / 4;
+	radio[light].emission.z = magic_const * magic_const / 4;
+	light -= magic_const;
+	radio[light].emission.x = magic_const * magic_const / 4;
+	radio[light].emission.y = magic_const * magic_const / 4;
+	radio[light].emission.z = magic_const * magic_const / 4;
+	light++;
+	radio[light].emission.x = magic_const * magic_const / 4;
+	radio[light].emission.y = magic_const * magic_const / 4;
+	radio[light].emission.z = magic_const * magic_const / 4;
+
+    glBindBuffer(GL_ARRAY_BUFFER, gl_color_buf);
+    computeRadiosityCL(2);
+
+    int pt = 0;
+
+    for (int i = 0; i < polygonCount; ++i) {
+		//if (i == 5) continue;
+		for (int i1 = 0; i1 < pt_poly[i].axis1; ++i1) {
+			for (int j1 = 0; j1 < pt_poly[i].axis2; ++j1) {
+                if (i != 5) {
+                    int pt_ind = ptindoffsets[i] + pt_poly[i].axis2 * i1 + j1;
+                    point ct = pt_poly[i].patches[i1][j1].vertex[0];
+                    coords[pt * COORDS_COUNT] = (float)ct.y;
+                    coords[pt * COORDS_COUNT + 1] = (float)ct.z;
+                    coords[pt * COORDS_COUNT + 2] = (float)ct.x - 3.0f;
+                    point side = sub(pt_poly[i].patches[i1][j1].vertex[1],
+                                     pt_poly[i].patches[i1][j1].vertex[0]);
+                    sides[pt * COORDS_COUNT] = (float)side.y;
+                    sides[pt * COORDS_COUNT + 1] = (float)side.z;
+                    sides[pt * COORDS_COUNT + 2] = (float)side.x;
+                    normals[pt * COORDS_COUNT] = (float)poly[i].normal.y;
+                    normals[pt * COORDS_COUNT + 1] = (float)poly[i].normal.z;
+                    normals[pt * COORDS_COUNT + 2] = (float)poly[i].normal.x;
+                }
+                pt++;
+			}
+        }
+    }
+
+    int vertexOffsetPosition = 0;
+	int vertexOffsetColor = 0;
+	GLint positionLocation, colorLocation, sideLocation, normalsLocation;
+
+    colorLocation = glGetAttribLocation(shaderProgram, "color");                 CHECK_GL_ERRORS
+	if (colorLocation != -1)
+	{
+			glVertexAttribPointer(colorLocation, 4, GL_HALF_FLOAT, GL_FALSE, sizeof(float4) / 2,
+                         (const GLvoid*)vertexOffsetColor);                      CHECK_GL_ERRORS
+			glEnableVertexAttribArray(colorLocation);                            CHECK_GL_ERRORS
+	}
+
+    //glGenBuffers(2, &gl_coords);                                                   CHECK_GL_ERRORS
+	glBindBuffer(GL_ARRAY_BUFFER, gl_coords);                                      CHECK_GL_ERRORS
+    glBufferData(GL_ARRAY_BUFFER, patchCount * sizeof(*coords) * COORDS_COUNT, coords,
+                 GL_STATIC_DRAW);                                                CHECK_GL_ERRORS
+
+
+	positionLocation = glGetAttribLocation(shaderProgram, "position");           CHECK_GL_ERRORS
+	if (positionLocation != -1)
+	{
+			glVertexAttribPointer(positionLocation, 3, GL_FLOAT, GL_FALSE,
+					sizeof(*coords) * COORDS_COUNT,
+                         (const GLvoid*)vertexOffsetPosition);                   CHECK_GL_ERRORS
+			glEnableVertexAttribArray(positionLocation);                         CHECK_GL_ERRORS
+	}
+
+	//glGenBuffers(3, &gl_sides);                                                   CHECK_GL_ERRORS
+	glBindBuffer(GL_ARRAY_BUFFER, gl_sides);                                      CHECK_GL_ERRORS
+    glBufferData(GL_ARRAY_BUFFER, patchCount * sizeof(*sides) * COORDS_COUNT, sides,
+                 GL_STATIC_DRAW);                                                CHECK_GL_ERRORS
+
+
+	sideLocation = glGetAttribLocation(shaderProgram, "side");                   CHECK_GL_ERRORS
+	if (sideLocation != -1)
+	{
+			glVertexAttribPointer(sideLocation, 3, GL_FLOAT, GL_FALSE,
+					sizeof(*sides) * COORDS_COUNT, (const GLvoid*)0);            CHECK_GL_ERRORS
+			glEnableVertexAttribArray(sideLocation);                             CHECK_GL_ERRORS
+	}
+
+	//glGenBuffers(4, &gl_normals);                                                   CHECK_GL_ERRORS
+	glBindBuffer(GL_ARRAY_BUFFER, gl_normals);                                      CHECK_GL_ERRORS
+    glBufferData(GL_ARRAY_BUFFER, patchCount * sizeof(*normals) * COORDS_COUNT, normals,
+                 GL_STATIC_DRAW);                                                CHECK_GL_ERRORS
+
+
+	normalsLocation = glGetAttribLocation(shaderProgram, "normal");              CHECK_GL_ERRORS
+	if (normalsLocation != -1)
+	{
+			glVertexAttribPointer(normalsLocation, 3, GL_FLOAT, GL_FALSE,
+					sizeof(*normals) * COORDS_COUNT, (const GLvoid*)0);          CHECK_GL_ERRORS
+			glEnableVertexAttribArray(normalsLocation);                         CHECK_GL_ERRORS
+	}
+
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);                          CHECK_GL_ERRORS
 
 	// делаем шейдерную программу активной
 	glUseProgram(shaderProgram);                                                 CHECK_GL_ERRORS
@@ -1289,10 +1206,9 @@ int useShaders(HDC hdc) {
 
 	// рендер треугольника из VBO привязанного к VAO
 	glPointSize(2.0f);                                                           CHECK_GL_ERRORS
-	glDrawArrays(GL_POINTS, 0, pt);                                              CHECK_GL_ERRORS
-	SwapBuffers(hdc);                                                            CHECK_GL_ERRORS
+    glDrawArrays(GL_POINTS, 0, pt);                                              CHECK_GL_ERRORS
+    SwapBuffers(hdc);                                              CHECK_GL_ERRORS
 }
-
 
 int loadSource(char * shaderName, char **textOut, int *textLen) {
 	FILE *input;

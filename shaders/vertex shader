@@ -28,4 +28,5 @@ void main(void)
         D = projectionMatrix * vec4(pnt + sd, 1.0);
 
         geometryColor = pow(color, vec4(1.0 / 2.2));
+        //geometryColor = vec4(0.0, 1.0, 1.0, 1.0);
 }

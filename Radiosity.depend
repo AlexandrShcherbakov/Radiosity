@@ -1,5 +1,5 @@
 # depslib dependency file v1.0
-1441786133 source:d:\dropbox\radiosity\radiosity\main.cpp
+1444675379 source:d:\dropbox\radiosity\radiosity\main.cpp
 	<tchar.h>
 	<windows.h>
 	<stdio.h>
@@ -9,7 +9,7 @@
 	"GL/wglext.h"
 	"GL/glext.h"
 
-1443793911 d:\dropbox\radiosity\radiosity\radiositylogic.h
+1444670068 d:\dropbox\radiosity\radiosity\radiositylogic.h
 	<windows.h>
 	<gl/gl.h>
 	<gl/glu.h>
@@ -18,7 +18,7 @@
 	"GL/glext.h"
 	"../clew/clew.h"
 
-1443867526 source:d:\dropbox\radiosity\radiosity\radiositylogic.c
+1444674566 source:d:\dropbox\radiosity\radiosity\radiositylogic.c
 	"radiositylogic.h"
 	<stdio.h>
 	<stdlib.h>
@@ -36,7 +36,7 @@
 	<CL/cl_gl.h>
 	<string.h>
 
-1440178109 d:\dropbox\radiosity\radiosity\gl\wglext.h
+1444055214 d:\dropbox\radiosity\radiosity\gl\wglext.h
 	<windows.h>
 
 902915672 d:\dropbox\radiosity\radiosity\\gl\glut.h
@@ -44,7 +44,7 @@
 	<GL/gl.h>
 	<GL/glu.h>
 
-1440178119 d:\dropbox\radiosity\radiosity\gl\glext.h
+1444055204 d:\dropbox\radiosity\radiosity\gl\glext.h
 	<windows.h>
 	<stddef.h>
 	<inttypes.h>
@@ -72,7 +72,7 @@
 	<OpenGL/glu.h>
 	<GL/glu.h>
 
-1443258728 d:\dropbox\radiosity\radiosity\cl\clew.h
+1444055198 d:\dropbox\radiosity\radiosity\cl\clew.h
 	<AvailabilityMacros.h>
 	<stdint.h>
 	<stddef.h>
@@ -104,7 +104,7 @@
 	<intrin.h>
 	<immintrin.h>
 
-1443687353 d:\dropbox\radiosity\clew\clew.h
+1444055064 d:\dropbox\radiosity\clew\clew.h
 	<AvailabilityMacros.h>
 	<stdint.h>
 	<stddef.h>
@@ -117,10 +117,10 @@
 	<intrin.h>
 	<immintrin.h>
 
-1443693156 d:\dropbox\radiosity\radiosity\\cl\cl_gl.h
+1444055206 d:\dropbox\radiosity\radiosity\\cl\cl_gl.h
 	<OpenCL/cl.h>
 	<proxy-opencl/CL/cl.h>
 
-1443118667 d:\dropbox\radiosity\radiosity\cl\proxy-opencl\cl\cl.h
+1444055273 d:\dropbox\radiosity\radiosity\cl\proxy-opencl\cl\cl.h
 	"clew.h"
 

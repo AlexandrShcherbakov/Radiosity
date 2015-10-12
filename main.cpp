@@ -112,6 +112,8 @@ int WINAPI WinMain (HINSTANCE hThisInstance,
 
 	radiosityMain();
     useShaders(hdc);
+    while(1)
+    justDraw(hdc);
 
     while (GetMessage (&messages, NULL, 0, 0))
     {

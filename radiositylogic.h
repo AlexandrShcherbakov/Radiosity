@@ -155,6 +155,9 @@ PFNGLUNIFORMMATRIX4FVPROC   glUniformMatrix4fv;
 ///Initialize and use shaders
 	int useShaders(HDC hdc);
 
+///Draw scene
+    void justDraw(HDC hdc);
+
 ///*******************************************
 ///
 ///OPERATORS FOR TYPES
@@ -257,9 +260,57 @@ static int *ptindoffsets;
 ///Arrays of radiosity
 static float4 *emission;
 static float4 *excident;
-static float4 *incident;
+//static float4 *incident;
 static float4 *reflectance;
 static float4 *deposit;
+
+///Storage for opencl buffers
+static float4* vec_data;
+
+///Squashed ff-array
+static float* ff_data;
+
+///OpenCL commands
+static cl_command_queue commands;
+
+///OpenCL kernel
+static cl_kernel kernel;
+static cl_kernel loadConstsKernel;
+static cl_kernel loadDataKernel;
+static cl_kernel Step1Kernel;
+static cl_kernel Step2Kernel;
+
+///OpenGL VBOs
+static GLuint gl_color_buf;
+static GLuint gl_coords;
+static GLuint gl_sides;
+static GLuint gl_normals;
+
+///Local OpenGL buffers
+static float* coords;
+static float* sides;
+static float* normals;
+
+///Program for OpenGL
+static GLuint shaderProgram;
+
+///VAO for OpenGL
+static GLuint meshVAO;
+
+///OpenCL buffers
+//static cl_mem cl_incident;
+static cl_mem cl_excident;
+static cl_mem cl_ff;
+static cl_mem cl_reflectance;
+//static cl_mem cl_emission;
+static cl_mem cl_deposit;
+
+///OpenCL half-float buffers
+static cl_mem half_excident;
+static cl_mem half_ff;
+static cl_mem half_reflectance;
+static cl_mem half_deposit;
+static cl_mem half_incident;
 
 #ifdef __cplusplus
 }
