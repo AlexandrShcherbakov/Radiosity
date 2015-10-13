@@ -42,6 +42,14 @@ __kernel void RWFloatArraysToHalf(__global float4 * excident,
     vstore_half4(exc, i, hdeposit);
 }
 
+float4 magicMult(float* exc, float* f) {
+    return (float4){exc[0] * f[0] + exc[4] * f[1] + exc[8] * f[2] + exc[12] * f[3],
+					exc[1] * f[0] + exc[5] * f[1] + exc[9] * f[2] + exc[13] * f[3],
+					exc[2] * f[0] + exc[6] * f[1] + exc[10] * f[2] + exc[14] * f[3],
+					exc[3] * f[0] + exc[7] * f[1] + exc[11] * f[2] + exc[15] * f[3]};
+}
+
+
 __kernel void Step1(__global half* excident,
                     __global half* ff,
                     __global half* reflection,
@@ -56,10 +64,11 @@ __kernel void Step1(__global half* excident,
 		int it = i * size + j;
 		exc = vload_half16(j / 4, excident);
 		f = vload_half4(it / 4, ff);
-		inc += (float4){exc[0], exc[1], exc[2], exc[3]} * f.x;
+		inc += magicMult(&exc, &f);
+		/*inc += (float4){exc[0], exc[1], exc[2], exc[3]} * f.x;
 		inc += (float4){exc[4], exc[5], exc[6], exc[7]} * f.y;
 		inc += (float4){exc[8], exc[9], exc[10], exc[11]} * f.z;
-		inc += (float4){exc[12], exc[13], exc[14], exc[15]} * f.w;
+		inc += (float4){exc[12], exc[13], exc[14], exc[15]} * f.w;*/
     }
     inc = inc * vload_half4(i, reflection);
     vstore_half4(inc, i, incident);
